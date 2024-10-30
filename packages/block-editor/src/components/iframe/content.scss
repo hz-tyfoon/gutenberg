@@ -11,7 +11,7 @@
 	// We don't want to animate the transform of the translateX because it is used
 	// to "center" the canvas. Leaving it on causes the canvas to slide around in
 	// odd ways.
-	@include editor-canvas-resize-animation( transform 0s, padding 0s, translate 0s);
+	@include editor-canvas-resize-animation( transform 0s, scale 0s, padding 0s, translate 0s);
 
 	&.zoom-out-animation {
 		position: fixed;
