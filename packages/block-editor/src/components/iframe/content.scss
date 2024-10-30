@@ -20,6 +20,9 @@
 		top: calc(-1 * #{$scroll-top});
 		bottom: 0;
 		translate: 0 calc(#{$scroll-top} - #{$scroll-top-next});
+		// Force preserving a scrollbar gutter as scrollbar-gutter isn't supported in all browsers yet,
+		// and removing the scrollbar causes the content to shift.
+		overflow-y: scroll;
 		// we only want to animate the scaling when entering zoom out. When sidebars
 		// are toggled, the resizing of the iframe handles scaling the canvas as well,
 		// and the doubled animations cause very odd animations.
