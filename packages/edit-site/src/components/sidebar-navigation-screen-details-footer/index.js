@@ -6,8 +6,8 @@ import { humanTimeDiff } from '@wordpress/date';
 import { createInterpolateElement } from '@wordpress/element';
 import { addQueryArgs } from '@wordpress/url';
 import {
-	Icon,
 	__experimentalItemGroup as ItemGroup,
+	__experimentalItem as Item,
 } from '@wordpress/components';
 import { backup } from '@wordpress/icons';
 
@@ -17,7 +17,6 @@ import { backup } from '@wordpress/icons';
 import {
 	SidebarNavigationScreenDetailsPanelRow,
 	SidebarNavigationScreenDetailsPanelLabel,
-	SidebarNavigationScreenDetailsPanelValue,
 } from '../sidebar-navigation-screen-details-panel';
 import SidebarNavigationItem from '../sidebar-navigation-item';
 
@@ -44,33 +43,32 @@ export default function SidebarNavigationScreenDetailsFooter( {
 		hrefProps.as = 'a';
 	}
 	return (
-		<ItemGroup className="edit-site-sidebar-navigation-screen-details-footer">
-			<SidebarNavigationItem
-				aria-label={ __( 'Revisions' ) }
-				{ ...hrefProps }
-				{ ...otherProps }
-			>
-				<SidebarNavigationScreenDetailsPanelRow justify="space-between">
+		<ItemGroup
+			size="large"
+			className="edit-site-sidebar-navigation-screen-details-footer"
+		>
+			<Item>
+				<SidebarNavigationScreenDetailsPanelRow>
 					<SidebarNavigationScreenDetailsPanelLabel>
-						{ __( 'Last modified' ) }
-					</SidebarNavigationScreenDetailsPanelLabel>
-					<SidebarNavigationScreenDetailsPanelValue>
 						{ createInterpolateElement(
 							sprintf(
 								/* translators: %s: is the relative time when the post was last modified. */
-								__( '<time>%s</time>' ),
+								__( 'Last modified: <time>%s</time>' ),
 								humanTimeDiff( record.modified )
 							),
 							{
 								time: <time dateTime={ record.modified } />,
 							}
 						) }
-					</SidebarNavigationScreenDetailsPanelValue>
-					<Icon
-						className="edit-site-sidebar-navigation-screen-details-footer__icon"
-						icon={ backup }
-					/>
+					</SidebarNavigationScreenDetailsPanelLabel>
 				</SidebarNavigationScreenDetailsPanelRow>
+			</Item>
+			<SidebarNavigationItem
+				icon={ backup }
+				{ ...hrefProps }
+				{ ...otherProps }
+			>
+				{ __( 'Revisions' ) }
 			</SidebarNavigationItem>
 		</ItemGroup>
 	);
