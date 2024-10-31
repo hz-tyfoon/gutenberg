@@ -356,13 +356,28 @@ function Iframe( {
 				prevContainerHeightRef.current / 2
 		);
 
-		// // Convert the zoomed in value to the new scale.
-		// // Use Math.round to avoid subpixel scrolling which would effectively result in a Math.floor.
-		const scrollTopNext = Math.round(
+		// Convert the zoomed in value to the new scale.
+		// Use Math.round to avoid subpixel scrolling which would effectively result in a Math.floor.
+		let scrollTopNext = Math.round(
 			( scrollTopOriginal + containerHeight / 2 ) * scaleValue +
 				frameSizeValue -
 				containerHeight / 2
 		);
+
+		const edgeThreshold = prevContainerHeightRef.current / 2;
+		const maxScrollPosition =
+			contentHeight - prevContainerHeightRef.current - frameSizeValue * 2;
+
+		const scaleToTop = scrollTopOriginal - edgeThreshold <= 0;
+		const scaleToBottom =
+			scrollTopOriginal - maxScrollPosition - edgeThreshold <= 0;
+
+		if ( scaleToTop ) {
+			scrollTopNext = 0;
+		} else if ( scaleToBottom ) {
+			// Not sure on this
+			scrollTopNext = maxScrollPosition * scaleValue;
+		}
 
 		iframeDocument.documentElement.style.setProperty(
 			'--wp-block-editor-iframe-zoom-out-scroll-top',
@@ -387,7 +402,13 @@ function Iframe( {
 
 			iframeDocument.documentElement.scrollTop = scrollTopNext;
 		}, 400 ); // 400ms should match the animation speed used in components/iframe/content.scss
-	}, [ scaleValue, frameSizeValue, containerHeight, iframeDocument ] );
+	}, [
+		scaleValue,
+		frameSizeValue,
+		containerHeight,
+		iframeDocument,
+		contentHeight,
+	] );
 
 	// Toggle zoom out CSS Classes only when zoom out mode changes. We could add these into the useEffect
 	// that controls settings the CSS variables, but then we would need to do more work to ensure we're
