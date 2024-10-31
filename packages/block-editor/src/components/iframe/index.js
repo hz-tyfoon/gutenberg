@@ -21,7 +21,6 @@ import {
 	useMergeRefs,
 	useRefEffect,
 	useDisabled,
-	usePrevious,
 } from '@wordpress/compose';
 import { __experimentalStyleProvider as StyleProvider } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
@@ -260,7 +259,7 @@ function Iframe( {
 	}, [] );
 
 	const isZoomedOut = scale !== 1;
-	const prevIsZoomedOut = usePrevious( isZoomedOut );
+	const prevIsZoomedOutRef = useRef( isZoomedOut );
 
 	useEffect( () => {
 		if ( ! isZoomedOut ) {
@@ -415,6 +414,9 @@ function Iframe( {
 	// only toggling these when the zoom out mode changes, as that useEffect is also triggered by a large
 	// number of dependencies.
 	useEffect( () => {
+		const prevIsZoomedOut = prevIsZoomedOutRef.current;
+		prevIsZoomedOutRef.current = isZoomedOut;
+
 		// If we're animating, don't re-update things.
 		if ( ! iframeDocument || prevIsZoomedOut === isZoomedOut ) {
 			return;
