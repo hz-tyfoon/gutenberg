@@ -338,7 +338,7 @@ function UnforwardedModal(
 											marginLeft={ 3 }
 										/>
 										<Button
-											size="small"
+											size="compact"
 											onClick={ (
 												event: React.MouseEvent< HTMLButtonElement >
 											) =>
