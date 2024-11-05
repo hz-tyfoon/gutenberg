@@ -390,6 +390,14 @@ function Iframe( {
 
 		iframeDocument.documentElement.classList.add( 'zoom-out-animation' );
 
+		// TODO: See if there's a way to wait for CSS transition to finish.
+		// 400ms should match the animation speed used in components/iframe/content.scss
+		// Ignore the delay when reduce motion is enabled.
+		const reduceMotion = iframeDocument.defaultView.matchMedia(
+			'(prefers-reduced-motion: reduce)'
+		).matches;
+		const delay = reduceMotion ? 0 : 400;
+
 		zoomOutAnimationTimeoutRef.current = setTimeout( () => {
 			iframeDocument.documentElement.classList.remove(
 				'zoom-out-animation'
@@ -400,7 +408,7 @@ function Iframe( {
 			prevScaleRef.current = scaleValue;
 
 			iframeDocument.documentElement.scrollTop = scrollTopNext;
-		}, 400 ); // 400ms should match the animation speed used in components/iframe/content.scss
+		}, delay );
 	}, [
 		scaleValue,
 		frameSizeValue,
