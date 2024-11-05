@@ -122,6 +122,7 @@ function Iframe( {
 		};
 	}, [] );
 	const { styles = '', scripts = '' } = resolvedAssets;
+	/** @type {[Document, any]} */
 	const [ iframeDocument, setIframeDocument ] = useState();
 	const initialContainerWidthRef = useRef( 0 );
 	const [ bodyClasses, setBodyClasses ] = useState( [] );
@@ -284,7 +285,8 @@ function Iframe( {
 	const frameSizeValue = parseInt( frameSize );
 	const prevFrameSizeRef = useRef( frameSizeValue );
 
-	const prevContainerHeightRef = useRef( containerHeight );
+	const prevClientHeightRef = useRef( containerHeight );
+	const prevScrollHeightRef = useRef( contentHeight );
 
 	const disabledRef = useDisabled( { isDisabled: ! readonly } );
 	const bodyRef = useMergeRefs( [
@@ -343,40 +345,48 @@ function Iframe( {
 	const handleZoomOutAnimation = useCallback( () => {
 		clearTimeout( zoomOutAnimationTimeoutRef.current );
 
+		// We can't trust the set value from contentHeight, as it was measured before the zoom out mode was changed.
+		// After zoom out mode is changed, appenders may appear or disappear, so we need to get the height from the iframe
+		// at this point when we're about to animate the zoom out. The iframe scrollTop, scrollHeight, and clientHeight will all
+		// be accurate. The client height also does change when the zoom out mode is toggled, as the bottom bar about selecting
+		// the template is added/removed when toggling zoom out mode.
 		const scrollTop = iframeDocument.documentElement.scrollTop;
+
+		// This is the unscaled height of the iframe content.
+		const clientHeight = iframeDocument.documentElement.clientHeight;
+
+		// This is the scaled height of the iframe content.
+		const scrollHeight = iframeDocument.documentElement.scrollHeight;
+
+		const prevClientHeight = prevClientHeightRef.current;
+		const prevScrollHeight = prevScrollHeightRef.current;
+		const prevScale = prevScaleRef.current;
+		const prevFrameSize = prevFrameSizeRef.current;
 
 		// Convert previous values to the zoomed in scale.
 		// Use Math.round to avoid subpixel scrolling which would effectively result in a Math.floor.
 		const scrollTopOriginal = Math.round(
-			( scrollTop +
-				prevContainerHeightRef.current / 2 -
-				prevFrameSizeRef.current ) /
-				prevScaleRef.current -
-				prevContainerHeightRef.current / 2
+			( scrollTop + prevClientHeight / 2 - prevFrameSize ) / prevScale -
+				prevClientHeight / 2
 		);
 
 		// Convert the zoomed in value to the new scale.
 		// Use Math.round to avoid subpixel scrolling which would effectively result in a Math.floor.
 		let scrollTopNext = Math.round(
-			( scrollTopOriginal + containerHeight / 2 ) * scaleValue +
+			( scrollTopOriginal + clientHeight / 2 ) * scaleValue +
 				frameSizeValue -
-				containerHeight / 2
+				clientHeight / 2
 		);
 
-		const edgeThreshold = prevContainerHeightRef.current / 2;
-		const maxScrollPosition =
-			contentHeight - prevContainerHeightRef.current - frameSizeValue * 2;
+		const scaleRatio = scaleValue / prevScale;
+		const maxScrollTop = scrollHeight * scaleRatio - clientHeight;
 
-		const scaleToTop = scrollTopOriginal - edgeThreshold <= 0;
-		const scaleToBottom =
-			scrollTopOriginal - maxScrollPosition - edgeThreshold <= 0;
+		// prettier-ignore
+		scrollTopNext = scrollTopNext - clientHeight / 2 <= 0 ? 0 : scrollTopNext;
+		// prettier-ignore
+		scrollTopNext = scrollTopNext + clientHeight / 2 >= maxScrollTop ? maxScrollTop : scrollTopNext;
 
-		if ( scaleToTop ) {
-			scrollTopNext = 0;
-		} else if ( scaleToBottom ) {
-			// Not sure on this
-			scrollTopNext = maxScrollPosition * scaleValue;
-		}
+		scrollTopNext = Math.min( Math.max( 0, scrollTopNext ), maxScrollTop );
 
 		iframeDocument.documentElement.style.setProperty(
 			'--wp-block-editor-iframe-zoom-out-scroll-top',
@@ -403,19 +413,13 @@ function Iframe( {
 				'zoom-out-animation'
 			);
 
-			prevContainerHeightRef.current = containerHeight;
+			prevClientHeightRef.current = clientHeight;
+			prevScrollHeightRef.current = scrollHeight;
 			prevFrameSizeRef.current = frameSizeValue;
 			prevScaleRef.current = scaleValue;
-
 			iframeDocument.documentElement.scrollTop = scrollTopNext;
 		}, delay );
-	}, [
-		scaleValue,
-		frameSizeValue,
-		containerHeight,
-		iframeDocument,
-		contentHeight,
-	] );
+	}, [ scaleValue, frameSizeValue, iframeDocument ] );
 
 	// Toggle zoom out CSS Classes only when zoom out mode changes. We could add these into the useEffect
 	// that controls settings the CSS variables, but then we would need to do more work to ensure we're
