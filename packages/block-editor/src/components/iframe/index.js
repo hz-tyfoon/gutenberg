@@ -344,47 +344,65 @@ function Iframe( {
 	const handleZoomOutAnimation = useCallback( () => {
 		clearTimeout( zoomOutAnimationTimeoutRef.current );
 
-		// We can't trust the set value from contentHeight, as it was measured before the zoom out mode was changed.
-		// After zoom out mode is changed, appenders may appear or disappear, so we need to get the height from the iframe
-		// at this point when we're about to animate the zoom out. The iframe scrollTop, scrollHeight, and clientHeight will all
-		// be accurate. The client height also does change when the zoom out mode is toggled, as the bottom bar about selecting
-		// the template is added/removed when toggling zoom out mode.
-		const scrollTop = iframeDocument.documentElement.scrollTop;
-
-		// This is the unscaled height of the iframe content.
-		const clientHeight = iframeDocument.documentElement.clientHeight;
-
-		// This is the scaled height of the iframe content.
-		const scrollHeight = iframeDocument.documentElement.scrollHeight;
-
-		const prevClientHeight = prevClientHeightRef.current;
+		// Previous scale value.
 		const prevScale = prevScaleRef.current;
+
+		// Unscaled height of the previous iframe container.
+		const prevClientHeight = prevClientHeightRef.current;
+
+		// Unscaled size of the previous padding around the iframe content.
 		const prevFrameSize = prevFrameSizeRef.current;
 
-		// Convert previous values to the zoomed in scale.
-		// Use Math.round to avoid subpixel scrolling which would effectively result in a Math.floor.
-		const scrollTopOriginal = Math.round(
-			( scrollTop + prevClientHeight / 2 - prevFrameSize ) / prevScale -
-				prevClientHeight / 2
-		);
+		// Unscaled height of the current iframe container.
+		const clientHeight = iframeDocument.documentElement.clientHeight;
 
-		// Convert the zoomed in value to the new scale.
-		// Use Math.round to avoid subpixel scrolling which would effectively result in a Math.floor.
-		let scrollTopNext = Math.round(
-			( scrollTopOriginal + clientHeight / 2 ) * scaleValue +
-				frameSizeValue -
-				clientHeight / 2
-		);
+		// Scaled height of the current iframe content.
+		const scrollHeight = iframeDocument.documentElement.scrollHeight;
 
-		// If we are near the top of the canvas, set the next scroll top to 0.
+		// We can't trust the set value from contentHeight, as it was measured
+		// before the zoom out mode was changed. After zoom out mode is changed,
+		// appenders may appear or disappear, so we need to get the height from
+		// the iframe at this point when we're about to animate the zoom out.
+		// The iframe scrollTop, scrollHeight, and clientHeight will all be
+		// accurate. The client height also does change when the zoom out mode
+		// is toggled, as the bottom bar about selecting the template is
+		// added/removed when toggling zoom out mode.
+		const scrollTop = iframeDocument.documentElement.scrollTop;
+
+		// Step 0: Start with the current scrollTop.
+		let scrollTopNext = scrollTop;
+
+		// Step 1: Undo the effects of the previous scale and frame around the
+		// midpoint of the visible area.
+		scrollTopNext =
+			( scrollTopNext + prevClientHeight / 2 - prevFrameSize ) /
+				prevScale -
+			prevClientHeight / 2;
+
+		// Step 2: Apply the new scale and frame around the midpoint of the
+		// visible area.
+		scrollTopNext =
+			( scrollTopNext + clientHeight / 2 ) * scaleValue +
+			frameSizeValue -
+			clientHeight / 2;
+
+		// Step 3: Handle an edge case so that you scroll to the top of the
+		// iframe if the top of the iframe content is visible in the container.
+		// The same edge case for the bottom is skipped because changing content
+		// makes calculating it impossible.
 		scrollTopNext = scrollTop <= prevFrameSize ? 0 : scrollTopNext;
 
-		const scaleRatio = scaleValue / prevScale;
+		// This is the scrollTop value if you are scrolled to the bottom of the
+		// iframe. We can't just let the browser handle it because we need to
+		// animate the scaling.
 		const maxScrollTop =
-			scrollHeight * scaleRatio - clientHeight + frameSizeValue * 2;
+			scrollHeight * ( scaleValue / prevScale ) +
+			frameSizeValue * 2 -
+			clientHeight;
 
-		// scrollTopNext will zoom to the center point unless it would scroll past the top or bottom.
-		// In that case, it will clamp to the top or bottom.
+		// Step 4: Clamp the scrollTopNext between the minimum and maximum
+		// possible scrollTop positions. Round the value to avoid subpixel
+		// truncation by the browser which sometimes causes a 1px error.
 		scrollTopNext = Math.round(
 			Math.min( Math.max( 0, scrollTopNext ), maxScrollTop )
 		);
