@@ -340,11 +340,7 @@ function Iframe( {
 
 	useEffect( () => cleanup, [ cleanup ] );
 
-	const zoomOutAnimationTimeoutRef = useRef( null );
-
 	const handleZoomOutAnimation = useCallback( () => {
-		clearTimeout( zoomOutAnimationTimeoutRef.current );
-
 		// Previous scale value.
 		const prevScale = prevScaleRef.current;
 
