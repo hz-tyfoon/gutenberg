@@ -121,7 +121,7 @@ function Iframe( {
 		};
 	}, [] );
 	const { styles = '', scripts = '' } = resolvedAssets;
-	/** @type {[Document, any]} */
+	/** @type {[Document, import('react').Dispatch<Document>]} */
 	const [ iframeDocument, setIframeDocument ] = useState();
 	const initialContainerWidthRef = useRef( 0 );
 	const [ bodyClasses, setBodyClasses ] = useState( [] );
