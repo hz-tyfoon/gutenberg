@@ -13,7 +13,6 @@ import {
 	useMemo,
 	useEffect,
 	useRef,
-	useCallback,
 } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import {
@@ -32,7 +31,6 @@ import { useBlockSelectionClearer } from '../block-selection-clearer';
 import { useWritingFlow } from '../writing-flow';
 import { getCompatibilityStyles } from './get-compatibility-styles';
 import { store as blockEditorStore } from '../../store';
-import { handle } from '@wordpress/icons';
 
 function bubbleEvent( event, Constructor, frame ) {
 	const init = {};
@@ -261,7 +259,6 @@ function Iframe( {
 	}, [] );
 
 	const isZoomedOut = scale !== 1;
-	const prevIsZoomedOutRef = useRef( isZoomedOut );
 
 	useEffect( () => {
 		if ( ! isZoomedOut ) {
@@ -340,7 +337,15 @@ function Iframe( {
 
 	useEffect( () => cleanup, [ cleanup ] );
 
-	const handleZoomOutAnimation = useCallback( () => {
+	useEffect( () => {
+		if (
+			! iframeDocument ||
+			// TODO: What should this condition be?
+			( scaleValue === 1 ) === ( prevScaleRef.current === 1 )
+		) {
+			return;
+		}
+
 		// Previous scale value.
 		const prevScale = prevScaleRef.current;
 
@@ -404,7 +409,23 @@ function Iframe( {
 			Math.min( Math.max( 0, scrollTopNext ), maxScrollTop )
 		);
 
-		function handleZoomOutEnd() {
+		iframeDocument.documentElement.style.setProperty(
+			'--wp-block-editor-iframe-zoom-out-scroll-top',
+			`${ scrollTop }px`
+		);
+
+		iframeDocument.documentElement.style.setProperty(
+			'--wp-block-editor-iframe-zoom-out-scroll-top-next',
+			`${ scrollTopNext }px`
+		);
+
+		iframeDocument.documentElement.classList.add( 'zoom-out-animation' );
+
+		function onZoomOutTransitionEnd() {
+			// Remove the position fixed for the animation.
+			iframeDocument.documentElement.classList.remove(
+				'zoom-out-animation'
+			);
 			// Update previous values.
 			prevClientHeightRef.current = clientHeight;
 			prevFrameSizeRef.current = frameSizeValue;
@@ -419,51 +440,40 @@ function Iframe( {
 		).matches;
 
 		if ( reduceMotion ) {
-			handleZoomOutEnd();
+			onZoomOutTransitionEnd();
 		} else {
-			iframeDocument.documentElement.style.setProperty(
-				'--wp-block-editor-iframe-zoom-out-scroll-top',
-				`${ scrollTop }px`
-			);
-
-			iframeDocument.documentElement.style.setProperty(
-				'--wp-block-editor-iframe-zoom-out-scroll-top-next',
-				`${ scrollTopNext }px`
-			);
-
-			iframeDocument.documentElement.classList.add(
-				'zoom-out-animation'
-			);
-
 			iframeDocument.documentElement.addEventListener(
 				'transitionend',
-				() => {
-					// Remove the position fixed for the animation.
-					iframeDocument.documentElement.classList.remove(
-						'zoom-out-animation'
-					);
-					handleZoomOutEnd();
-				},
+				onZoomOutTransitionEnd,
 				{ once: true }
 			);
 		}
-	}, [ scaleValue, frameSizeValue, iframeDocument ] );
+
+		return () => {
+			iframeDocument.documentElement.style.removeProperty(
+				'--wp-block-editor-iframe-zoom-out-scroll-top'
+			);
+			iframeDocument.documentElement.style.removeProperty(
+				'--wp-block-editor-iframe-zoom-out-scroll-top-next'
+			);
+			iframeDocument.documentElement.classList.remove(
+				'zoom-out-animation'
+			);
+			iframeDocument.documentElement.removeEventListener(
+				'transitionend',
+				onZoomOutTransitionEnd
+			);
+		};
+	}, [ iframeDocument, scaleValue, frameSizeValue ] );
 
 	// Toggle zoom out CSS Classes only when zoom out mode changes. We could add these into the useEffect
 	// that controls settings the CSS variables, but then we would need to do more work to ensure we're
 	// only toggling these when the zoom out mode changes, as that useEffect is also triggered by a large
 	// number of dependencies.
 	useEffect( () => {
-		const prevIsZoomedOut = prevIsZoomedOutRef.current;
-		prevIsZoomedOutRef.current = isZoomedOut;
-
-		// If we're animating, don't re-update things.
-		if ( ! iframeDocument || prevIsZoomedOut === isZoomedOut ) {
+		if ( ! iframeDocument ) {
 			return;
 		}
-
-		// If zoom out mode is toggled, handle the animation
-		handleZoomOutAnimation();
 
 		if ( isZoomedOut ) {
 			iframeDocument.documentElement.classList.add( 'is-zoomed-out' );
@@ -471,8 +481,11 @@ function Iframe( {
 			iframeDocument.documentElement.classList.remove( 'is-zoomed-out' );
 		}
 
-		return () => {};
-	}, [ iframeDocument, isZoomedOut, handleZoomOutAnimation ] );
+		return () => {
+			// TODO: Removing this causes issues with the zoom out animation.
+			// iframeDocument.documentElement.classList.remove( 'is-zoomed-out' );
+		};
+	}, [ iframeDocument, isZoomedOut ] );
 
 	// Calculate the scaling and CSS variables for the zoom out canvas
 	useEffect( () => {
