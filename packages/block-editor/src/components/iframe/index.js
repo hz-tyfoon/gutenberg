@@ -527,6 +527,28 @@ function Iframe( {
 			'--wp-block-editor-iframe-zoom-out-scale-container-width',
 			`${ scaleContainerWidth }px`
 		);
+
+		return () => {
+			// TODO: Removing this causes issues with the zoom out animation.
+			// iframeDocument.documentElement.style.removeProperty(
+			// 	'--wp-block-editor-iframe-zoom-out-scale'
+			// );
+			// iframeDocument.documentElement.style.removeProperty(
+			// 	'--wp-block-editor-iframe-zoom-out-frame-size'
+			// );
+			// iframeDocument.documentElement.style.removeProperty(
+			// 	'--wp-block-editor-iframe-zoom-out-content-height'
+			// );
+			// iframeDocument.documentElement.style.removeProperty(
+			// 	'--wp-block-editor-iframe-zoom-out-inner-height'
+			// );
+			// iframeDocument.documentElement.style.removeProperty(
+			// 	'--wp-block-editor-iframe-zoom-out-container-width'
+			// );
+			// iframeDocument.documentElement.style.removeProperty(
+			// 	'--wp-block-editor-iframe-zoom-out-scale-container-width'
+			// );
+		};
 	}, [
 		scaleValue,
 		frameSize,
