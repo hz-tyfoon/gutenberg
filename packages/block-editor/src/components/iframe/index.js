@@ -32,6 +32,7 @@ import { useBlockSelectionClearer } from '../block-selection-clearer';
 import { useWritingFlow } from '../writing-flow';
 import { getCompatibilityStyles } from './get-compatibility-styles';
 import { store as blockEditorStore } from '../../store';
+import { handle } from '@wordpress/icons';
 
 function bubbleEvent( event, Constructor, frame ) {
 	const init = {};
@@ -407,46 +408,49 @@ function Iframe( {
 			Math.min( Math.max( 0, scrollTopNext ), maxScrollTop )
 		);
 
+		function handleZoomOutEnd() {
+			// Update previous values.
+			prevClientHeightRef.current = clientHeight;
+			prevFrameSizeRef.current = frameSizeValue;
+			prevScaleRef.current = scaleValue;
+
+			// Set the final scroll position that was just animated to.
+			iframeDocument.documentElement.scrollTop = scrollTopNext;
+		}
+
 		const reduceMotion = iframeDocument.defaultView.matchMedia(
 			'(prefers-reduced-motion: reduce)'
 		).matches;
 
 		if ( reduceMotion ) {
-			// TODO: This seems to be broken somehow.
-			iframeDocument.documentElement.scrollTop = scrollTopNext;
-			return;
+			handleZoomOutEnd();
+		} else {
+			iframeDocument.documentElement.style.setProperty(
+				'--wp-block-editor-iframe-zoom-out-scroll-top',
+				`${ scrollTop }px`
+			);
+
+			iframeDocument.documentElement.style.setProperty(
+				'--wp-block-editor-iframe-zoom-out-scroll-top-next',
+				`${ scrollTopNext }px`
+			);
+
+			iframeDocument.documentElement.classList.add(
+				'zoom-out-animation'
+			);
+
+			iframeDocument.documentElement.addEventListener(
+				'transitionend',
+				() => {
+					// Remove the position fixed for the animation.
+					iframeDocument.documentElement.classList.remove(
+						'zoom-out-animation'
+					);
+					handleZoomOutEnd();
+				},
+				{ once: true }
+			);
 		}
-
-		iframeDocument.documentElement.style.setProperty(
-			'--wp-block-editor-iframe-zoom-out-scroll-top',
-			`${ scrollTop }px`
-		);
-
-		iframeDocument.documentElement.style.setProperty(
-			'--wp-block-editor-iframe-zoom-out-scroll-top-next',
-			`${ scrollTopNext }px`
-		);
-
-		iframeDocument.documentElement.classList.add( 'zoom-out-animation' );
-
-		iframeDocument.documentElement.addEventListener(
-			'transitionend',
-			() => {
-				// Remove the position fixed for the animation.
-				iframeDocument.documentElement.classList.remove(
-					'zoom-out-animation'
-				);
-
-				// Update previous values.
-				prevClientHeightRef.current = clientHeight;
-				prevFrameSizeRef.current = frameSizeValue;
-				prevScaleRef.current = scaleValue;
-
-				// Set the final scroll position that was just animated to.
-				iframeDocument.documentElement.scrollTop = scrollTopNext;
-			},
-			{ once: true }
-		);
 	}, [ scaleValue, frameSizeValue, iframeDocument ] );
 
 	// Toggle zoom out CSS Classes only when zoom out mode changes. We could add these into the useEffect
