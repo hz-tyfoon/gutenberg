@@ -359,7 +359,7 @@ function Iframe( {
 		const scrollHeight = iframeDocument.documentElement.scrollHeight;
 
 		const prevClientHeight = prevClientHeightRef.current;
-		const prevScrollHeight = prevScrollHeightRef.current;
+		// const prevScrollHeight = prevScrollHeightRef.current;
 		const prevScale = prevScaleRef.current;
 		const prevFrameSize = prevFrameSizeRef.current;
 
@@ -381,10 +381,14 @@ function Iframe( {
 		const scaleRatio = scaleValue / prevScale;
 		const maxScrollTop = scrollHeight * scaleRatio - clientHeight;
 
+		// Account for differences in client height changes between zoom in and zoom out modes.
+		const edgeThreshold =
+			clientHeight / 2 + ( prevClientHeight - clientHeight );
+
 		// prettier-ignore
-		scrollTopNext = scrollTopNext - clientHeight / 2 <= 0 ? 0 : scrollTopNext;
+		scrollTopNext = scrollTopNext - edgeThreshold <= 0 ? 0 : scrollTopNext;
 		// prettier-ignore
-		scrollTopNext = scrollTopNext + clientHeight / 2 >= maxScrollTop ? maxScrollTop : scrollTopNext;
+		scrollTopNext = scrollTopNext + edgeThreshold >= maxScrollTop ? maxScrollTop : scrollTopNext;
 
 		scrollTopNext = Math.min( Math.max( 0, scrollTopNext ), maxScrollTop );
 
