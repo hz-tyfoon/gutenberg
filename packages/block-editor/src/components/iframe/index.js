@@ -286,7 +286,6 @@ function Iframe( {
 	const prevFrameSizeRef = useRef( frameSizeValue );
 
 	const prevClientHeightRef = useRef( containerHeight );
-	const prevScrollHeightRef = useRef( contentHeight );
 
 	const disabledRef = useDisabled( { isDisabled: ! readonly } );
 	const bodyRef = useMergeRefs( [
@@ -359,7 +358,6 @@ function Iframe( {
 		const scrollHeight = iframeDocument.documentElement.scrollHeight;
 
 		const prevClientHeight = prevClientHeightRef.current;
-		// const prevScrollHeight = prevScrollHeightRef.current;
 		const prevScale = prevScaleRef.current;
 		const prevFrameSize = prevFrameSizeRef.current;
 
@@ -379,18 +377,14 @@ function Iframe( {
 		);
 
 		const scaleRatio = scaleValue / prevScale;
-		const maxScrollTop = scrollHeight * scaleRatio - clientHeight;
+		const maxScrollTop =
+			scrollHeight * scaleRatio - clientHeight + frameSizeValue * 2;
 
-		// Account for differences in client height changes between zoom in and zoom out modes.
-		const edgeThreshold =
-			clientHeight / 2 + ( prevClientHeight - clientHeight );
-
-		// prettier-ignore
-		scrollTopNext = scrollTopNext - edgeThreshold <= 0 ? 0 : scrollTopNext;
-		// prettier-ignore
-		scrollTopNext = scrollTopNext + edgeThreshold >= maxScrollTop ? maxScrollTop : scrollTopNext;
-
-		scrollTopNext = Math.min( Math.max( 0, scrollTopNext ), maxScrollTop );
+		// scrollTopNext will zoom to the center point unless it would scroll past the top or bottom.
+		// In that case, it will clamp to the top or bottom.
+		scrollTopNext = Math.round(
+			Math.min( Math.max( 0, scrollTopNext ), maxScrollTop )
+		);
 
 		iframeDocument.documentElement.style.setProperty(
 			'--wp-block-editor-iframe-zoom-out-scroll-top',
@@ -418,7 +412,6 @@ function Iframe( {
 			);
 
 			prevClientHeightRef.current = clientHeight;
-			prevScrollHeightRef.current = scrollHeight;
 			prevFrameSizeRef.current = frameSizeValue;
 			prevScaleRef.current = scaleValue;
 			iframeDocument.documentElement.scrollTop = scrollTopNext;
