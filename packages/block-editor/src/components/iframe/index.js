@@ -376,6 +376,9 @@ function Iframe( {
 				clientHeight / 2
 		);
 
+		// If we are near the top of the canvas, set the next scroll top to 0.
+		scrollTopNext = scrollTop <= prevFrameSize ? 0 : scrollTopNext;
+
 		const scaleRatio = scaleValue / prevScale;
 		const maxScrollTop =
 			scrollHeight * scaleRatio - clientHeight + frameSizeValue * 2;
