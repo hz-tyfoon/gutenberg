@@ -407,6 +407,16 @@ function Iframe( {
 			Math.min( Math.max( 0, scrollTopNext ), maxScrollTop )
 		);
 
+		const reduceMotion = iframeDocument.defaultView.matchMedia(
+			'(prefers-reduced-motion: reduce)'
+		).matches;
+
+		if ( reduceMotion ) {
+			// TODO: This seems to be broken somehow.
+			iframeDocument.documentElement.scrollTop = scrollTopNext;
+			return;
+		}
+
 		iframeDocument.documentElement.style.setProperty(
 			'--wp-block-editor-iframe-zoom-out-scroll-top',
 			`${ scrollTop }px`
@@ -419,24 +429,24 @@ function Iframe( {
 
 		iframeDocument.documentElement.classList.add( 'zoom-out-animation' );
 
-		// TODO: See if there's a way to wait for CSS transition to finish.
-		// 400ms should match the animation speed used in components/iframe/content.scss
-		// Ignore the delay when reduce motion is enabled.
-		const reduceMotion = iframeDocument.defaultView.matchMedia(
-			'(prefers-reduced-motion: reduce)'
-		).matches;
-		const delay = reduceMotion ? 0 : 400;
+		iframeDocument.documentElement.addEventListener(
+			'transitionend',
+			() => {
+				// Remove the position fixed for the animation.
+				iframeDocument.documentElement.classList.remove(
+					'zoom-out-animation'
+				);
 
-		zoomOutAnimationTimeoutRef.current = setTimeout( () => {
-			iframeDocument.documentElement.classList.remove(
-				'zoom-out-animation'
-			);
+				// Update previous values.
+				prevClientHeightRef.current = clientHeight;
+				prevFrameSizeRef.current = frameSizeValue;
+				prevScaleRef.current = scaleValue;
 
-			prevClientHeightRef.current = clientHeight;
-			prevFrameSizeRef.current = frameSizeValue;
-			prevScaleRef.current = scaleValue;
-			iframeDocument.documentElement.scrollTop = scrollTopNext;
-		}, delay );
+				// Set the final scroll position that was just animated to.
+				iframeDocument.documentElement.scrollTop = scrollTopNext;
+			},
+			{ once: true }
+		);
 	}, [ scaleValue, frameSizeValue, iframeDocument ] );
 
 	// Toggle zoom out CSS Classes only when zoom out mode changes. We could add these into the useEffect
