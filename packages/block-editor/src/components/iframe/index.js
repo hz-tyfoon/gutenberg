@@ -129,10 +129,8 @@ function Iframe( {
 	const [ before, writingFlowRef, after ] = useWritingFlow();
 	const [ contentResizeListener, { height: contentHeight } ] =
 		useResizeObserver();
-	const [
-		containerResizeListener,
-		{ width: containerWidth, height: containerHeight },
-	] = useResizeObserver();
+	const [ containerResizeListener, { width: containerWidth } ] =
+		useResizeObserver();
 
 	const setRef = useRefEffect( ( node ) => {
 		node._load = () => {
@@ -283,7 +281,8 @@ function Iframe( {
 	const frameSizeValue = parseInt( frameSize );
 	const prevFrameSizeRef = useRef( frameSizeValue );
 
-	const prevClientHeightRef = useRef( containerHeight );
+	// Initialized in the useEffect.
+	const prevClientHeightRef = useRef();
 
 	const disabledRef = useDisabled( { isDisabled: ! readonly } );
 	const bodyRef = useMergeRefs( [
@@ -346,20 +345,20 @@ function Iframe( {
 			return;
 		}
 
-		// Previous scale value.
-		const prevScale = prevScaleRef.current;
-
-		// Unscaled height of the previous iframe container.
-		const prevClientHeight = prevClientHeightRef.current;
-
-		// Unscaled size of the previous padding around the iframe content.
-		const prevFrameSize = prevFrameSizeRef.current;
-
 		// Unscaled height of the current iframe container.
 		const clientHeight = iframeDocument.documentElement.clientHeight;
 
 		// Scaled height of the current iframe content.
 		const scrollHeight = iframeDocument.documentElement.scrollHeight;
+
+		// Previous scale value.
+		const prevScale = prevScaleRef.current;
+
+		// Unscaled size of the previous padding around the iframe content.
+		const prevFrameSize = prevFrameSizeRef.current;
+
+		// Unscaled height of the previous iframe container.
+		const prevClientHeight = prevClientHeightRef.current ?? clientHeight;
 
 		// We can't trust the set value from contentHeight, as it was measured
 		// before the zoom out mode was changed. After zoom out mode is changed,
