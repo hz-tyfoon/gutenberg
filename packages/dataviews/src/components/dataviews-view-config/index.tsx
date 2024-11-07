@@ -35,7 +35,6 @@ import { useInstanceId } from '@wordpress/compose';
  */
 import {
 	SORTING_DIRECTIONS,
-	LAYOUT_GRID,
 	LAYOUT_TABLE,
 	sortIcons,
 	sortLabels,
@@ -46,10 +45,10 @@ import {
 	getVisibleFieldIds,
 	getHiddenFieldIds,
 } from '../../dataviews-layouts';
+import { DensityOptions } from '../../types';
 import type { SupportedLayouts, View, Field } from '../../types';
 import DataViewsContext from '../dataviews-context';
 import { unlock } from '../../lock-unlock';
-import DensityPicker from '../../dataviews-layouts/grid/density-picker';
 
 const { Menu } = unlock( componentsPrivateApis );
 
@@ -235,6 +234,50 @@ function ItemsPerPageControl() {
 					/>
 				);
 			} ) }
+		</ToggleGroupControl>
+	);
+}
+
+function DensityPicker() {
+	const { view, onChangeView } = useContext( DataViewsContext );
+	if (
+		! VIEW_LAYOUTS.find( ( layout ) => layout.type === view.type )
+			?.supportsDensity
+	) {
+		return null;
+	}
+	return (
+		<ToggleGroupControl
+			__nextHasNoMarginBottom
+			size="__unstable-large"
+			label={ __( 'Density' ) }
+			value={ view.density || DensityOptions.medium }
+			onChange={ ( value ) => {
+				onChangeView( {
+					...view,
+					density: value as DensityOptions,
+				} );
+			} }
+			isBlock
+		>
+			<ToggleGroupControlOption
+				key="comfortable"
+				value={ DensityOptions.comfortable }
+				label={ _x(
+					'Comfortable',
+					'Density option for DataView layout'
+				) }
+			/>
+			<ToggleGroupControlOption
+				key="medium"
+				value={ DensityOptions.medium }
+				label={ _x( 'Medium', 'Density option for DataView layout' ) }
+			/>
+			<ToggleGroupControlOption
+				key="compact"
+				value={ DensityOptions.compact }
+				label={ _x( 'Compact', 'Density option for DataView layout' ) }
+			/>
 		</ToggleGroupControl>
 	);
 }
@@ -512,14 +555,7 @@ function SettingsSection( {
 	);
 }
 
-function DataviewsViewConfigDropdown( {
-	density,
-	setDensity,
-}: {
-	density: number;
-	setDensity: React.Dispatch< React.SetStateAction< number > >;
-} ) {
-	const { view } = useContext( DataViewsContext );
+function DataviewsViewConfigDropdown() {
 	const popoverId = useInstanceId(
 		_DataViewsViewConfig,
 		'dataviews-view-config-dropdown'
@@ -551,12 +587,7 @@ function DataviewsViewConfigDropdown( {
 								<SortFieldControl />
 								<SortDirectionControl />
 							</HStack>
-							{ view.type === LAYOUT_GRID && (
-								<DensityPicker
-									density={ density }
-									setDensity={ setDensity }
-								/>
-							) }
+							<DensityPicker />
 							<ItemsPerPageControl />
 						</SettingsSection>
 						<SettingsSection title={ __( 'Properties' ) }>
@@ -570,21 +601,14 @@ function DataviewsViewConfigDropdown( {
 }
 
 function _DataViewsViewConfig( {
-	density,
-	setDensity,
 	defaultLayouts = { list: {}, grid: {}, table: {} },
 }: {
-	density: number;
-	setDensity: React.Dispatch< React.SetStateAction< number > >;
 	defaultLayouts?: SupportedLayouts;
 } ) {
 	return (
 		<>
 			<ViewTypeMenu defaultLayouts={ defaultLayouts } />
-			<DataviewsViewConfigDropdown
-				density={ density }
-				setDensity={ setDensity }
-			/>
+			<DataviewsViewConfigDropdown />
 		</>
 	);
 }

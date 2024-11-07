@@ -247,6 +247,12 @@ export interface NormalizedFilter {
 	isPrimary: boolean;
 }
 
+export enum DensityOptions {
+	medium = 0,
+	compact = 1,
+	comfortable = 2,
+}
+
 interface ViewBase {
 	/**
 	 * The layout of the view.
@@ -292,6 +298,12 @@ interface ViewBase {
 	 * The fields to render
 	 */
 	fields?: string[];
+
+	/**
+	 * The density of the view.
+	 */
+	// TODO: maybe move to `layout` object?
+	density?: DensityOptions;
 }
 
 export interface CombinedField {
@@ -501,7 +513,6 @@ export interface ViewBaseProps< Item > {
 	onClickItem: ( item: Item ) => void;
 	isItemClickable: ( item: Item ) => boolean;
 	view: View;
-	density: number;
 }
 
 export interface ViewTableProps< Item > extends ViewBaseProps< Item > {
