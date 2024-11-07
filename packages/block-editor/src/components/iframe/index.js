@@ -20,6 +20,7 @@ import {
 	useMergeRefs,
 	useRefEffect,
 	useDisabled,
+	useReducedMotion,
 } from '@wordpress/compose';
 import { __experimentalStyleProvider as StyleProvider } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
@@ -131,6 +132,7 @@ function Iframe( {
 		useResizeObserver();
 	const [ containerResizeListener, { width: containerWidth } ] =
 		useResizeObserver();
+	const prefersReducedMotion = useReducedMotion();
 
 	const setRef = useRefEffect( ( node ) => {
 		node._load = () => {
@@ -434,11 +436,7 @@ function Iframe( {
 			iframeDocument.documentElement.scrollTop = scrollTopNext;
 		}
 
-		const reduceMotion = iframeDocument.defaultView.matchMedia(
-			'(prefers-reduced-motion: reduce)'
-		).matches;
-
-		if ( reduceMotion ) {
+		if ( prefersReducedMotion ) {
 			onZoomOutTransitionEnd();
 		} else {
 			iframeDocument.documentElement.addEventListener(
@@ -463,7 +461,7 @@ function Iframe( {
 				onZoomOutTransitionEnd
 			);
 		};
-	}, [ iframeDocument, scaleValue, frameSizeValue ] );
+	}, [ iframeDocument, scaleValue, frameSizeValue, prefersReducedMotion ] );
 
 	// Toggle zoom out CSS Classes only when zoom out mode changes. We could add these into the useEffect
 	// that controls settings the CSS variables, but then we would need to do more work to ensure we're
