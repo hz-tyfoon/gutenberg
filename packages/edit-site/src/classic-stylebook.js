@@ -54,6 +54,7 @@ function ClassicStylebookLayout() {
 				<SidebarNavigationScreen
 					title={ __( 'Styles' ) }
 					description={ __( 'Overview of styled blocks.' ) }
+					isRoot
 				/>
 			),
 			preview: (
