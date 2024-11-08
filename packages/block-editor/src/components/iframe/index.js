@@ -483,6 +483,7 @@ function Iframe( {
 		if ( isZoomedOut ) {
 			iframeDocument.documentElement.classList.add( 'is-zoomed-out' );
 		} else {
+			// HACK: Since we can't remove this in the cleanup, we need to do it here.
 			iframeDocument.documentElement.classList.remove( 'is-zoomed-out' );
 		}
 
