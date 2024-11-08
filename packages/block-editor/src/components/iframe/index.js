@@ -322,7 +322,8 @@ function Iframe( {
 	useEffect( () => {
 		if (
 			! iframeDocument ||
-			// TODO: What should this condition be?
+			// HACK: Checking if isZoomedOut differs from prevIsZoomedOut here
+			// instead of the dependency array to appease the linter.
 			( scaleValue === 1 ) === ( prevScaleRef.current === 1 )
 		) {
 			return;
@@ -463,7 +464,8 @@ function Iframe( {
 		}
 
 		return () => {
-			// TODO: Removing this causes issues with the zoom out animation.
+			// HACK: Skipping cleanup because it causes issues with the zoom out
+			// animation. More refactoring is needed to fix this properly.
 			// iframeDocument.documentElement.classList.remove( 'is-zoomed-out' );
 		};
 	}, [ iframeDocument, isZoomedOut ] );
@@ -510,7 +512,8 @@ function Iframe( {
 		);
 
 		return () => {
-			// TODO: Removing this causes issues with the zoom out animation.
+			// HACK: Skipping cleanup because it causes issues with the zoom out
+			// animation. More refactoring is needed to fix this properly.
 			// iframeDocument.documentElement.style.removeProperty(
 			// 	'--wp-block-editor-iframe-zoom-out-scale'
 			// );
