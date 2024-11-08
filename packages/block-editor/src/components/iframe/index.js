@@ -271,20 +271,18 @@ function Iframe( {
 		containerWidth
 	);
 
+	const frameSizeValue = parseInt( frameSize );
+
 	const maxWidth = 750;
 	const scaleValue =
 		scale === 'auto-scaled'
-			? ( Math.min( containerWidth, maxWidth ) -
-					parseInt( frameSize ) * 2 ) /
+			? ( Math.min( containerWidth, maxWidth ) - frameSizeValue * 2 ) /
 			  scaleContainerWidth
 			: scale;
+
 	const prevScaleRef = useRef( scaleValue );
-
-	const frameSizeValue = parseInt( frameSize );
 	const prevFrameSizeRef = useRef( frameSizeValue );
-
-	// Initialized in the useEffect.
-	const prevClientHeightRef = useRef();
+	const prevClientHeightRef = useRef( /* Initialized in the useEffect. */ );
 
 	const disabledRef = useDisabled( { isDisabled: ! readonly } );
 	const bodyRef = useMergeRefs( [
