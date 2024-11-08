@@ -409,6 +409,7 @@ function Iframe( {
 			iframeDocument.documentElement.classList.remove(
 				'zoom-out-animation'
 			);
+
 			// Update previous values.
 			prevClientHeightRef.current = clientHeight;
 			prevFrameSizeRef.current = frameSizeValue;
@@ -418,9 +419,10 @@ function Iframe( {
 			iframeDocument.documentElement.scrollTop = scrollTopNext;
 		}
 
+		let raf;
 		if ( prefersReducedMotion ) {
 			// Hack: Wait for the window values to recalculate.
-			iframeDocument.defaultView.requestAnimationFrame(
+			raf = iframeDocument.defaultView.requestAnimationFrame(
 				onZoomOutTransitionEnd
 			);
 		} else {
@@ -441,10 +443,14 @@ function Iframe( {
 			iframeDocument.documentElement.classList.remove(
 				'zoom-out-animation'
 			);
-			iframeDocument.documentElement.removeEventListener(
-				'transitionend',
-				onZoomOutTransitionEnd
-			);
+			if ( prefersReducedMotion ) {
+				iframeDocument.defaultView.cancelAnimationFrame( raf );
+			} else {
+				iframeDocument.documentElement.removeEventListener(
+					'transitionend',
+					onZoomOutTransitionEnd
+				);
+			}
 		};
 	}, [ iframeDocument, scaleValue, frameSizeValue, prefersReducedMotion ] );
 
