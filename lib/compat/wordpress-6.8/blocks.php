@@ -50,16 +50,7 @@ function gutenberg_stabilize_experimental_block_supports( $args ) {
 				continue;
 			}
 
-			/*
-			 * Determine the order of keys, so the last defined can be preferred.
-			 *
-			 * The reason for preferring the last defined key is that after filters
-			 * are applied, the last inserted key is likely the most up-to-date value.
-			 * We cannot determine with certainty which value was "last modified" so
-			 * the insertion order is the best guess. The extreme edge case of multiple
-			 * filters tweaking the same support property will become less over time as
-			 * extenders migrate existing blocks and plugins to stable keys.
-			 */
+			// Determine the order of keys, so the last defined can be preferred.
 			$key_positions      = array_flip( array_keys( $args['supports'] ) );
 			$experimental_index = $key_positions[ $support ] ?? -1;
 			$stabilized_index   = $key_positions[ $stabilized_key ] ?? -1;

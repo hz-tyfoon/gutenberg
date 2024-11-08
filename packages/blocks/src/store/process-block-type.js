@@ -77,7 +77,7 @@ function stabilizeSupports( rawSupports ) {
 	const newSupports = {};
 
 	for ( const [ support, config ] of Object.entries( rawSupports ) ) {
-		// Add the support's config as is when it's not in need of stabilization.
+		// Add the current support's config as is if it does not need stabilization.
 		if ( ! EXPERIMENTAL_TO_STABLE_KEYS[ support ] ) {
 			newSupports[ support ] = config;
 			continue;
@@ -87,22 +87,13 @@ function stabilizeSupports( rawSupports ) {
 		if ( typeof EXPERIMENTAL_TO_STABLE_KEYS[ support ] === 'string' ) {
 			const stabilizedKey = EXPERIMENTAL_TO_STABLE_KEYS[ support ];
 
-			// If there is no stabilized key present, use the experimental config as is.
+			// If there's no stabilized key present, just use the config as is.
 			if ( ! Object.hasOwn( rawSupports, stabilizedKey ) ) {
 				newSupports[ stabilizedKey ] = config;
 				continue;
 			}
 
-			/*
-			 * Determine the order of keys, so the last defined can be preferred.
-			 *
-			 * The reason for preferring the last defined key is that after filters
-			 * are applied, the last inserted key is likely the most up-to-date value.
-			 * We cannot determine with certainty which value was "last modified" so
-			 * the insertion order is the best guess. The extreme edge case of multiple
-			 * filters tweaking the same support property will become less over time as
-			 * extenders migrate existing blocks and plugins to stable keys.
-			 */
+			// Determine the insertion order for both key.
 			const entries = Object.entries( rawSupports );
 			const experimentalIndex = entries.findIndex(
 				( [ key ] ) => key === support
@@ -111,7 +102,6 @@ function stabilizeSupports( rawSupports ) {
 				( [ key ] ) => key === stabilizedKey
 			);
 
-			// Update support config, prefer the last defined value.
 			if ( typeof config === 'object' && config !== null ) {
 				newSupports[ stabilizedKey ] =
 					experimentalIndex < stabilizedIndex
