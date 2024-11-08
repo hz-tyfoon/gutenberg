@@ -1,0 +1,15 @@
+@include wordpress-admin-schemes();
+
+#wpadminbar,
+#adminmenumain {
+	display: none;
+}
+#wpcontent {
+	margin-left: 0;
+}
+body.js #wpbody {
+	padding-top: 0;
+}
+body {
+	@include wp-admin-reset("#gutenberg-classic-stylebook");
+}
