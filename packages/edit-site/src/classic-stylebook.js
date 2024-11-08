@@ -19,7 +19,11 @@ import {
 } from '@wordpress/editor';
 import { privateApis as routerPrivateApis } from '@wordpress/router';
 import { useResizeObserver } from '@wordpress/compose';
-import { store as blockEditorStore } from '@wordpress/block-editor';
+import {
+	store as blockEditorStore,
+	BlockEditorProvider,
+} from '@wordpress/block-editor';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
@@ -28,7 +32,7 @@ import './hooks';
 import { store as editSiteStore } from './store';
 import Layout from './components/layout';
 import { unlock } from './lock-unlock';
-import SidebarNavigationScreenMain from './components/sidebar-navigation-screen-main/index.js';
+import SidebarNavigationScreen from './components/sidebar-navigation-screen/index.js';
 import { StyleBookBody } from './components/style-book';
 import { getExamples } from './components/style-book/examples';
 
@@ -46,7 +50,12 @@ function ClassicStylebookLayout() {
 	const route = {
 		name: 'stylebook',
 		areas: {
-			sidebar: <SidebarNavigationScreenMain />,
+			sidebar: (
+				<SidebarNavigationScreen
+					title={ __( 'Styles' ) }
+					description={ __( 'Overview of styled blocks.' ) }
+				/>
+			),
 			preview: (
 				<StyleBookBody
 					enableResizing={ false }
@@ -104,7 +113,9 @@ export function initializeClassicStylebook( id, settings ) {
 			<GlobalStylesProvider>
 				<UnsavedChangesWarning />
 				<RouterProvider>
-					<ClassicStylebookLayout />
+					<BlockEditorProvider settings={ settings }>
+						<ClassicStylebookLayout />
+					</BlockEditorProvider>
 				</RouterProvider>
 			</GlobalStylesProvider>
 		</StrictMode>
