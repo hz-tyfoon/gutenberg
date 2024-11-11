@@ -33,7 +33,10 @@ import { store as editSiteStore } from './store';
 import Layout from './components/layout';
 import { unlock } from './lock-unlock';
 import SidebarNavigationScreen from './components/sidebar-navigation-screen/index.js';
-import { StyleBookBody } from './components/style-book';
+import {
+	StyleBookBody,
+	getExamplesForSinglePageUse,
+} from './components/style-book';
 import { getExamples } from './components/style-book/examples';
 
 const { RouterProvider } = unlock( routerPrivateApis );
@@ -47,6 +50,9 @@ function ClassicStylebookLayout() {
 	);
 
 	const examples = getExamples();
+	// Dedupe the examples as they include all categories with repeat sections.
+	const examplesForSinglePageUse = getExamplesForSinglePageUse( examples );
+
 	const route = {
 		name: 'stylebook',
 		areas: {
@@ -64,7 +70,7 @@ function ClassicStylebookLayout() {
 					showTabs={ false }
 					isSelected={ () => null }
 					onSelect={ () => null }
-					examples={ examples }
+					examples={ examplesForSinglePageUse }
 					onClick={ () => null }
 					settings={ settings }
 					sizes={ sizes }

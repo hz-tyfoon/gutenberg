@@ -177,6 +177,31 @@ function useMultiOriginPalettes() {
 	return palettes;
 }
 
+/**
+ * Get deduped examples for single page stylebook.
+ * @param {Array} examples Array of examples.
+ * @return {Array} Deduped examples.
+ */
+export function getExamplesForSinglePageUse( examples ) {
+	const examplesForSinglePageUse = [];
+	const overviewCategoryExamples = getExamplesByCategory(
+		{ slug: 'overview' },
+		examples
+	);
+	examplesForSinglePageUse.push( ...overviewCategoryExamples.examples );
+	const otherExamples = examples.filter( ( example ) => {
+		return (
+			example.category !== 'overview' &&
+			! overviewCategoryExamples.examples.find(
+				( overviewExample ) => overviewExample.name === example.name
+			)
+		);
+	} );
+	examplesForSinglePageUse.push( ...otherExamples );
+
+	return examplesForSinglePageUse;
+}
+
 function StyleBook( {
 	enableResizing = true,
 	isSelected,
@@ -203,21 +228,7 @@ function StyleBook( {
 		[ examples ]
 	);
 
-	const examplesForSinglePageUse = [];
-	const overviewCategoryExamples = getExamplesByCategory(
-		{ slug: 'overview' },
-		examples
-	);
-	examplesForSinglePageUse.push( ...overviewCategoryExamples.examples );
-	const otherExamples = examples.filter( ( example ) => {
-		return (
-			example.category !== 'overview' &&
-			! overviewCategoryExamples.examples.find(
-				( overviewExample ) => overviewExample.name === example.name
-			)
-		);
-	} );
-	examplesForSinglePageUse.push( ...otherExamples );
+	const examplesForSinglePageUse = getExamplesForSinglePageUse( examples );
 
 	const { base: baseConfig } = useContext( GlobalStylesContext );
 	const goTo = getStyleBookNavigationFromPath( path );

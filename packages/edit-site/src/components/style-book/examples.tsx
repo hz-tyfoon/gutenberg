@@ -73,8 +73,8 @@ function getOverviewBlockExamples(
 ): BlockExample[] {
 	const examples: BlockExample[] = [];
 
-	// Get theme palette from colors.
-	const themePalette = colors.colors.find(
+	// Get theme palette from colors if they exist.
+	const themePalette = colors?.colors.find(
 		( origin: ColorOrigin ) => origin.slug === 'theme'
 	);
 
