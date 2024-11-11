@@ -406,7 +406,10 @@ function Iframe( {
 		// possible scrollTop positions. Round the value to avoid subpixel
 		// truncation by the browser which sometimes causes a 1px error.
 		scrollTopNext = Math.round(
-			Math.min( Math.max( 0, scrollTopNext ), maxScrollTop )
+			Math.min(
+				Math.max( 0, scrollTopNext ),
+				Math.max( 0, maxScrollTop )
+			)
 		);
 
 		iframeDocument.documentElement.style.setProperty(
