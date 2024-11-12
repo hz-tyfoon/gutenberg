@@ -68,13 +68,9 @@ function ClassicStylebookLayout() {
 					enableResizing={ false }
 					showCloseButton={ false }
 					showTabs={ false }
-					isSelected={ () => null }
-					onSelect={ () => null }
 					examples={ examplesForSinglePageUse }
-					onClick={ () => null }
 					settings={ settings }
 					sizes={ sizes }
-					goTo={ {} }
 				/>
 			),
 		},
