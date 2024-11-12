@@ -531,11 +531,15 @@ const Example = ( { id, title, blocks, isSelected, onClick, content } ) => {
 						'is-disabled-example': !! disabledProps?.disabled,
 					} ) }
 					id={ id }
-					aria-label={ sprintf(
-						// translators: %s: Title of a block, e.g. Heading.
-						__( 'Open %s styles in Styles panel' ),
-						title
-					) }
+					aria-label={
+						!! onClick
+							? sprintf(
+									// translators: %s: Title of a block, e.g. Heading.
+									__( 'Open %s styles in Styles panel' ),
+									title
+							  )
+							: undefined
+					}
 					render={ <div /> }
 					role={ !! onClick ? 'button' : null }
 					onClick={ onClick }
