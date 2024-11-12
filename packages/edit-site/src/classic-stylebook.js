@@ -22,6 +22,7 @@ import { useResizeObserver } from '@wordpress/compose';
 import {
 	store as blockEditorStore,
 	BlockEditorProvider,
+	__experimentalUseMultipleOriginColorsAndGradients as useMultipleOriginColorsAndGradients,
 } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 
@@ -49,7 +50,19 @@ function ClassicStylebookLayout() {
 		[]
 	);
 
-	const examples = getExamples();
+	const { colors, gradients } = useMultipleOriginColorsAndGradients();
+	// Exclude the default colors and gradients.
+	const themeColors = colors?.filter( ( color ) => color.slug === 'theme' );
+	const themeGradients = gradients?.filter(
+		( gradient ) => gradient.slug === 'theme'
+	);
+
+	const examples = getExamples( {
+		colors: themeColors,
+		gradients: themeGradients,
+		duotones: [], // Classic themes don't support duotone palettes.
+	} );
+
 	// Dedupe the examples as they include all categories with repeat sections.
 	const examplesForSinglePageUse = getExamplesForSinglePageUse( examples );
 
