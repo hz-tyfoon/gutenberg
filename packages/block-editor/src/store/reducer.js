@@ -2131,6 +2131,170 @@ const combinedReducers = combineReducers( {
 	zoomLevel,
 } );
 
+function recurseBlocks( _blocks, callback ) {
+	if ( ! _blocks?.length ) {
+		return;
+	}
+
+	for ( const block of _blocks ) {
+		callback( block );
+		recurseBlocks( block?.innerBlocks, callback );
+	}
+}
+
+function hasParentWithName( state, clientId, name ) {
+	let parent = state.blocks.parents.get( clientId );
+	while ( parent ) {
+		if ( state.blocks.byClientId.get( parent ).name === name ) {
+			return true;
+		}
+		parent = state.blocks.parents.get( parent );
+	}
+	return false;
+}
+
+function getPatternBlockEditingModes( state ) {
+	if ( ! state.patternClientIds?.size ) {
+		return new Map();
+	}
+
+	const patternBlockEditingModes = new Map();
+	for ( const clientId of state.patternClientIds ) {
+		// The pattern block is a controlled block, so the inner blocks are stored
+		// under a special key in the tree.
+		// Fallback to the normal key if the special key doesn't exist, as it will
+		// still allow adding the editing mode of the pattern block itself.
+		const patternTree =
+			state.blocks.tree.get( `controlled||${ clientId }` ) ??
+			state.blocks.tree.get( clientId );
+
+		if ( hasParentWithName( state, clientId, 'core/block' ) ) {
+			// This is a nested pattern block, it should be set to disabled,
+			// along with all its child blocks.
+			patternBlockEditingModes.set( clientId, 'disabled' );
+			recurseBlocks( patternTree?.innerBlocks, ( block ) => {
+				patternBlockEditingModes.set( block.clientId, 'disabled' );
+			} );
+		} else {
+			// Set the parent pattern block to contentOnly.
+			patternBlockEditingModes.set( clientId, 'contentOnly' );
+			recurseBlocks( patternTree?.innerBlocks, ( block ) => {
+				// If an inner block has bindings, it should be set to contentOnly.
+				// Else it should be set to disabled.
+				if (
+					block?.attributes?.metadata?.bindings &&
+					Object.keys( block?.attributes?.metadata?.bindings ).length
+				) {
+					patternBlockEditingModes.set(
+						block.clientId,
+						'contentOnly'
+					);
+				} else {
+					patternBlockEditingModes.set( block.clientId, 'disabled' );
+				}
+			} );
+		}
+	}
+	return patternBlockEditingModes;
+}
+
+const withPatternBlockEditingModes = ( reducer ) => {
+	return ( state, action ) => {
+		const nextState = reducer( state, action );
+
+		if ( nextState === state ) {
+			return state;
+		}
+
+		nextState.patternClientIds = state?.patternClientIds ?? new Set();
+		nextState.patternBlockEditingModes =
+			state?.patternBlockEditingModes ?? new Map();
+
+		switch ( action.type ) {
+			case 'RESET_BLOCKS': {
+				nextState.patternClientIds = new Set();
+				recurseBlocks( action.blocks, ( block ) => {
+					if ( block.name === 'core/block' ) {
+						nextState.patternClientIds.add( block.clientId );
+					}
+				} );
+				nextState.patternBlockEditingModes =
+					getPatternBlockEditingModes( nextState );
+				break;
+			}
+			case 'INSERT_BLOCKS': {
+				recurseBlocks( action.blocks, ( block ) => {
+					if ( block.name === 'core/block' ) {
+						nextState.patternClientIds.add( block.clientId );
+					}
+				} );
+				nextState.patternBlockEditingModes =
+					getPatternBlockEditingModes( nextState );
+				break;
+			}
+			case 'REMOVE_BLOCKS': {
+				for ( const removedClientId of action.clientIds ) {
+					const removedTree =
+						state.blocks.tree.get(
+							`controlled||${ removedClientId }`
+						) ?? state.blocks.tree.get( removedClientId );
+					if ( removedTree ) {
+						recurseBlocks( [ removedTree ], ( block ) => {
+							nextState.patternClientIds.delete( block.clientId );
+						} );
+					}
+				}
+				nextState.patternBlockEditingModes =
+					getPatternBlockEditingModes( nextState );
+				break;
+			}
+			case 'REPLACE_INNER_BLOCKS': {
+				const rootTree =
+					state.blocks.tree.get(
+						`controlled||${ action.rootClientId }`
+					) ?? state.blocks.tree.get( action.rootClientId );
+
+				if ( rootTree ) {
+					recurseBlocks( rootTree?.innerBlocks, ( block ) => {
+						nextState.patternClientIds.delete( block.clientId );
+					} );
+				}
+				recurseBlocks( action.blocks, ( block ) => {
+					if ( block.name === 'core/block' ) {
+						nextState.patternClientIds.add( block.clientId );
+					}
+				} );
+				nextState.patternBlockEditingModes =
+					getPatternBlockEditingModes( nextState );
+				break;
+			}
+			case 'REPLACE_BLOCKS': {
+				for ( const removedClientId of action.clientIds ) {
+					const removedTree =
+						state.blocks.tree.get(
+							`controlled||${ removedClientId }`
+						) ?? state.blocks.tree.get( removedClientId );
+					if ( removedTree ) {
+						recurseBlocks( [ removedTree ], ( block ) => {
+							nextState.patternClientIds.delete( block.clientId );
+						} );
+					}
+				}
+				recurseBlocks( action.blocks, ( block ) => {
+					if ( block.name === 'core/block' ) {
+						nextState.patternClientIds.add( block.clientId );
+					}
+				} );
+				nextState.patternBlockEditingModes =
+					getPatternBlockEditingModes( nextState );
+				break;
+			}
+		}
+
+		return nextState;
+	};
+};
+
 function withAutomaticChangeReset( reducer ) {
 	return ( state, action ) => {
 		const nextState = reducer( state, action );
@@ -2184,4 +2348,6 @@ function withAutomaticChangeReset( reducer ) {
 	};
 }
 
-export default withAutomaticChangeReset( combinedReducers );
+export default withPatternBlockEditingModes(
+	withAutomaticChangeReset( combinedReducers )
+);
