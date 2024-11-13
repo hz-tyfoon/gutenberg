@@ -183,6 +183,19 @@ export function useScaleCanvas( {
 			return;
 		}
 
+		// Set the value that we want to animate from.
+		// We will update them after we add the animation class on next render.
+		iframeDocument.documentElement.style.setProperty(
+			'--wp-block-editor-iframe-zoom-out-scale',
+			scale
+		);
+
+		// frameSize has to be a px value for the scaling and frame size to be computed correctly.
+		iframeDocument.documentElement.style.setProperty(
+			'--wp-block-editor-iframe-zoom-out-frame-size',
+			`${ frameSize }px`
+		);
+
 		iframeDocument.documentElement.style.setProperty(
 			'--wp-block-editor-iframe-zoom-out-content-height',
 			`${ contentHeight }px`
