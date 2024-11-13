@@ -45,7 +45,7 @@ import {
 	getVisibleFieldIds,
 	getHiddenFieldIds,
 } from '../../dataviews-layouts';
-import { DensityOptions } from '../../types';
+import { Density } from '../../types';
 import type { SupportedLayouts, View, Field } from '../../types';
 import DataViewsContext from '../dataviews-context';
 import { unlock } from '../../lock-unlock';
@@ -251,18 +251,18 @@ function DensityPicker() {
 			__nextHasNoMarginBottom
 			size="__unstable-large"
 			label={ __( 'Density' ) }
-			value={ view.density || DensityOptions.medium }
+			value={ view.density || Density.medium }
 			onChange={ ( value ) => {
 				onChangeView( {
 					...view,
-					density: value as DensityOptions,
+					density: value as Density,
 				} );
 			} }
 			isBlock
 		>
 			<ToggleGroupControlOption
 				key="comfortable"
-				value={ DensityOptions.comfortable }
+				value={ Density.comfortable }
 				label={ _x(
 					'Comfortable',
 					'Density option for DataView layout'
@@ -270,12 +270,12 @@ function DensityPicker() {
 			/>
 			<ToggleGroupControlOption
 				key="medium"
-				value={ DensityOptions.medium }
+				value={ Density.medium }
 				label={ _x( 'Medium', 'Density option for DataView layout' ) }
 			/>
 			<ToggleGroupControlOption
 				key="compact"
-				value={ DensityOptions.compact }
+				value={ Density.compact }
 				label={ _x( 'Compact', 'Density option for DataView layout' ) }
 			/>
 		</ToggleGroupControl>

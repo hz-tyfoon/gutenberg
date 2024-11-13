@@ -247,10 +247,10 @@ export interface NormalizedFilter {
 	isPrimary: boolean;
 }
 
-export enum DensityOptions {
-	medium = 0,
-	compact = 1,
-	comfortable = 2,
+export enum Density {
+	compact = 'compact',
+	medium = 'medium',
+	comfortable = 'comfortable',
 }
 
 interface ViewBase {
@@ -302,8 +302,7 @@ interface ViewBase {
 	/**
 	 * The density of the view.
 	 */
-	// TODO: maybe move to `layout` object?
-	density?: DensityOptions;
+	density?: Density;
 }
 
 export interface CombinedField {

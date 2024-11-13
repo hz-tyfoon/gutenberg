@@ -22,11 +22,10 @@ import { __ } from '@wordpress/i18n';
 import ItemActions from '../../components/dataviews-item-actions';
 import SingleSelectionCheckbox from '../../components/dataviews-selection-checkbox';
 import { useHasAPossibleBulkAction } from '../../components/dataviews-bulk-actions';
-import { DensityOptions } from '../../types';
 import type { Action, NormalizedField, ViewGridProps } from '../../types';
 import type { SetSelection } from '../../private-types';
 import getClickableItemProps from '../utils/get-clickable-item-props';
-import useDensityOptions from './use-density-options';
+import useGridStyle from './use-grid-style';
 
 interface GridItemProps< Item > {
 	selection: string[];
@@ -224,22 +223,7 @@ export default function ViewGrid< Item >( {
 		{ visibleFields: [], badgeFields: [] }
 	);
 	const hasData = !! data?.length;
-	// The `DensityOptions.medium` (default) is handled with css. If another density is selected,
-	// we query the viewport to determine the number of columns to display per option.
-	const densityOptions = useDensityOptions();
-	const gridStyle =
-		!! view.density &&
-		[ DensityOptions.comfortable, DensityOptions.compact ].includes(
-			view.density as DensityOptions
-		)
-			? {
-					gridTemplateColumns: `repeat(${
-						view.density === DensityOptions.compact
-							? densityOptions.max
-							: densityOptions.min
-					}, minmax(0, 1fr))`,
-			  }
-			: {};
+	const gridStyle = useGridStyle( view );
 	return (
 		<>
 			{ hasData && (
