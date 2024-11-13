@@ -247,11 +247,7 @@ export interface NormalizedFilter {
 	isPrimary: boolean;
 }
 
-export enum Density {
-	compact = 'compact',
-	medium = 'medium',
-	comfortable = 'comfortable',
-}
+export type Density = 'compact' | 'medium' | 'comfortable';
 
 interface ViewBase {
 	/**

@@ -6,21 +6,16 @@ import { useViewportMatch } from '@wordpress/compose';
 /**
  * Internal dependencies
  */
-import type { ViewGrid } from '../../types';
-import { Density } from '../../types';
+import type { Density, ViewGrid } from '../../types';
 
 export default function useGridStyle( view: ViewGrid ) {
 	const isXHuge = useViewportMatch( 'xhuge' );
 	const isHuge = useViewportMatch( 'huge' );
 	const isXlarge = useViewportMatch( 'xlarge' );
 	const isMedium = useViewportMatch( 'small' );
-	// The `Density.medium` (default) is handled with css. If another density is selected,
+	// The `medium` density (default) is handled with css. If another density is selected,
 	// we query the viewport to determine the number of columns to display per option.
-	if (
-		! [ Density.comfortable, Density.compact ].includes(
-			view.density as Density
-		)
-	) {
+	if ( ! [ 'comfortable', 'compact' ].includes( view.density as Density ) ) {
 		return;
 	}
 
@@ -39,7 +34,7 @@ export default function useGridStyle( view: ViewGrid ) {
 	}
 	return {
 		gridTemplateColumns: `repeat(${
-			view.density === Density.compact ? gridColumns.max : gridColumns.min
+			view.density === 'compact' ? gridColumns.max : gridColumns.min
 		}, minmax(0, 1fr))`,
 	};
 }
