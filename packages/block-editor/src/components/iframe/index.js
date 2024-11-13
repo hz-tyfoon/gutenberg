@@ -504,7 +504,7 @@ function Iframe( {
 		}
 
 		// Note: When we initialize the zoom out when the canvas is smaller (sidebars open),
-		// initialContainerWidthRef will be smaller than the full page, and reflow will happen
+		// initialContainerWidth will be smaller than the full page, and reflow will happen
 		// when the canvas area becomes larger due to sidebars closing. This is a known but
 		// minor divergence for now.
 
