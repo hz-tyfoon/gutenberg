@@ -77,7 +77,7 @@ function stabilizeSupports( rawSupports ) {
 	const newSupports = {};
 
 	for ( const [ support, config ] of Object.entries( rawSupports ) ) {
-		// Add the current support's config as is if it does not need stabilization.
+		// Add the support's config as is when it's not in need of stabilization.
 		if ( ! EXPERIMENTAL_TO_STABLE_KEYS[ support ] ) {
 			newSupports[ support ] = config;
 			continue;
@@ -87,13 +87,13 @@ function stabilizeSupports( rawSupports ) {
 		if ( typeof EXPERIMENTAL_TO_STABLE_KEYS[ support ] === 'string' ) {
 			const stabilizedKey = EXPERIMENTAL_TO_STABLE_KEYS[ support ];
 
-			// If there's no stabilized key present, just use the config as is.
+			// If there is no stabilized key present, use the experimental config as is.
 			if ( ! Object.hasOwn( rawSupports, stabilizedKey ) ) {
 				newSupports[ stabilizedKey ] = config;
 				continue;
 			}
 
-			// Determine the insertion order for both key.
+			// Determine the order of keys, so the last defined can be preferred.
 			const entries = Object.entries( rawSupports );
 			const experimentalIndex = entries.findIndex(
 				( [ key ] ) => key === support
@@ -102,6 +102,7 @@ function stabilizeSupports( rawSupports ) {
 				( [ key ] ) => key === stabilizedKey
 			);
 
+			// Update support config, prefer the last defined value.
 			if ( typeof config === 'object' && config !== null ) {
 				newSupports[ stabilizedKey ] =
 					experimentalIndex < stabilizedIndex
