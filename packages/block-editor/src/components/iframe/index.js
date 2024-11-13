@@ -227,21 +227,6 @@ function Iframe( {
 		};
 	}, [] );
 
-	const [ windowInnerWidth, setWindowInnerWidth ] = useState();
-
-	const windowResizeRef = useRefEffect( ( node ) => {
-		const nodeWindow = node.ownerDocument.defaultView;
-
-		setWindowInnerWidth( nodeWindow.innerWidth );
-		const onResize = () => {
-			setWindowInnerWidth( nodeWindow.innerWidth );
-		};
-		nodeWindow.addEventListener( 'resize', onResize );
-		return () => {
-			nodeWindow.removeEventListener( 'resize', onResize );
-		};
-	}, [] );
-
 	const isZoomedOut = scale !== 1;
 
 	useEffect( () => {
@@ -268,7 +253,6 @@ function Iframe( {
 		iframeDocument,
 		contentHeight,
 		containerWidth,
-		windowInnerWidth,
 		isZoomedOut,
 		scaleContainerWidth,
 	} );
@@ -400,7 +384,7 @@ function Iframe( {
 	);
 
 	return (
-		<div className="block-editor-iframe__container" ref={ windowResizeRef }>
+		<div className="block-editor-iframe__container">
 			{ containerResizeListener }
 			<div
 				className={ clsx(

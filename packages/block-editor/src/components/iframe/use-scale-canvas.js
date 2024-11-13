@@ -13,7 +13,6 @@ import { useReducedMotion } from '@wordpress/compose';
  * @param {number}   root0.containerWidth      The width of the container.
  * @param {number}   root0.frameSize           The size of the frame around the content.
  * @param {Document} root0.iframeDocument      The document of the iframe.
- * @param {number}   root0.windowInnerWidth    The height of the inner window
  * @param {boolean}  root0.isZoomedOut         Whether the canvas is in zoom out mode.
  * @param {number}   root0.scale               The scale of the canvas.
  * @param {number}   root0.scaleContainerWidth The width of the container at the scaled size.
@@ -24,7 +23,6 @@ export function useScaleCanvas( {
 	iframeDocument,
 	contentHeight,
 	containerWidth,
-	windowInnerWidth,
 	isZoomedOut,
 	scaleContainerWidth,
 } ) {
@@ -263,7 +261,6 @@ export function useScaleCanvas( {
 		iframeDocument,
 		contentHeight,
 		containerWidth,
-		windowInnerWidth,
 		isZoomedOut,
 		scaleContainerWidth,
 	] );
