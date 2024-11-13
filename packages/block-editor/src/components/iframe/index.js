@@ -273,14 +273,14 @@ function Iframe( {
 	const frameSizeValue = parseInt( frameSize );
 
 	const maxWidth = 750;
-	const scaleValue =
-		scale === 'auto-scaled'
-			? ( Math.min( containerWidth, maxWidth ) - frameSizeValue * 2 ) /
-			  scaleContainerWidth
-			: scale;
 
 	useScaleCanvas( {
-		scaleValue,
+		scale:
+			scale === 'auto-scaled'
+				? ( Math.min( containerWidth, maxWidth ) -
+						frameSizeValue * 2 ) /
+				  scaleContainerWidth
+				: scale,
 		frameSizeValue,
 		iframeDocument,
 		iframeWindowInnerHeight,

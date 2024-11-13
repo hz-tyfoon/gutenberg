@@ -16,11 +16,11 @@ import { useReducedMotion } from '@wordpress/compose';
  * @param {number}   root0.iframeWindowInnerHeight The height of the inner window
  * @param {number}   root0.windowInnerWidth        The height of the inner window
  * @param {boolean}  root0.isZoomedOut             Whether the canvas is in zoom out mode.
- * @param {number}   root0.scaleValue              The scale of the canvas.
+ * @param {number}   root0.scale                   The scale of the canvas.
  * @param {number}   root0.scaleContainerWidth     The width of the container at the scaled size.
  */
 export function useScaleCanvas( {
-	scaleValue,
+	scale,
 	frameSizeValue,
 	iframeDocument,
 	iframeWindowInnerHeight,
@@ -32,7 +32,7 @@ export function useScaleCanvas( {
 } ) {
 	const prefersReducedMotion = useReducedMotion();
 
-	const prevScaleRef = useRef( scaleValue );
+	const prevScaleRef = useRef( scale );
 	const prevFrameSizeRef = useRef( frameSizeValue );
 	const prevClientHeightRef = useRef( /* Initialized in the useEffect. */ );
 
@@ -41,7 +41,7 @@ export function useScaleCanvas( {
 			! iframeDocument ||
 			// HACK: Checking if isZoomedOut differs from prevIsZoomedOut here
 			// instead of the dependency array to appease the linter.
-			( scaleValue === 1 ) === ( prevScaleRef.current === 1 )
+			( scale === 1 ) === ( prevScaleRef.current === 1 )
 		) {
 			return;
 		}
@@ -84,7 +84,7 @@ export function useScaleCanvas( {
 		// Step 2: Apply the new scale and frame around the midpoint of the
 		// visible area.
 		scrollTopNext =
-			( scrollTopNext + clientHeight / 2 ) * scaleValue +
+			( scrollTopNext + clientHeight / 2 ) * scale +
 			frameSizeValue -
 			clientHeight / 2;
 
@@ -98,7 +98,7 @@ export function useScaleCanvas( {
 		// iframe. We can't just let the browser handle it because we need to
 		// animate the scaling.
 		const maxScrollTop =
-			scrollHeight * ( scaleValue / prevScale ) +
+			scrollHeight * ( scale / prevScale ) +
 			frameSizeValue * 2 -
 			clientHeight;
 
@@ -133,7 +133,7 @@ export function useScaleCanvas( {
 			// Update previous values.
 			prevClientHeightRef.current = clientHeight;
 			prevFrameSizeRef.current = frameSizeValue;
-			prevScaleRef.current = scaleValue;
+			prevScaleRef.current = scale;
 
 			// Set the final scroll position that was just animated to.
 			iframeDocument.documentElement.scrollTop = scrollTopNext;
@@ -172,7 +172,7 @@ export function useScaleCanvas( {
 				);
 			}
 		};
-	}, [ iframeDocument, scaleValue, frameSizeValue, prefersReducedMotion ] );
+	}, [ iframeDocument, scale, frameSizeValue, prefersReducedMotion ] );
 
 	// Toggle zoom out CSS Classes only when zoom out mode changes. We could add these into the useEffect
 	// that controls settings the CSS variables, but then we would need to do more work to ensure we're
@@ -213,7 +213,7 @@ export function useScaleCanvas( {
 		// but calc( 100px / 2px ) is not.
 		iframeDocument.documentElement.style.setProperty(
 			'--wp-block-editor-iframe-zoom-out-scale',
-			scaleValue
+			scale
 		);
 
 		// frameSize has to be a px value for the scaling and frame size to be computed correctly.
@@ -261,7 +261,7 @@ export function useScaleCanvas( {
 			// );
 		};
 	}, [
-		scaleValue,
+		scale,
 		frameSizeValue,
 		iframeDocument,
 		iframeWindowInnerHeight,
