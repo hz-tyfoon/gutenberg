@@ -9,21 +9,19 @@ import { useReducedMotion } from '@wordpress/compose';
  * the states.
  *
  * @param {Object}   root0
- * @param {number}   root0.contentHeight           The height of the content in the iframe.
- * @param {number}   root0.containerWidth          The width of the container.
- * @param {number}   root0.frameSize               The size of the frame around the content.
- * @param {Document} root0.iframeDocument          The document of the iframe.
- * @param {number}   root0.iframeWindowInnerHeight The height of the inner window
- * @param {number}   root0.windowInnerWidth        The height of the inner window
- * @param {boolean}  root0.isZoomedOut             Whether the canvas is in zoom out mode.
- * @param {number}   root0.scale                   The scale of the canvas.
- * @param {number}   root0.scaleContainerWidth     The width of the container at the scaled size.
+ * @param {number}   root0.contentHeight       The height of the content in the iframe.
+ * @param {number}   root0.containerWidth      The width of the container.
+ * @param {number}   root0.frameSize           The size of the frame around the content.
+ * @param {Document} root0.iframeDocument      The document of the iframe.
+ * @param {number}   root0.windowInnerWidth    The height of the inner window
+ * @param {boolean}  root0.isZoomedOut         Whether the canvas is in zoom out mode.
+ * @param {number}   root0.scale               The scale of the canvas.
+ * @param {number}   root0.scaleContainerWidth The width of the container at the scaled size.
  */
 export function useScaleCanvas( {
 	scale,
 	frameSize,
 	iframeDocument,
-	iframeWindowInnerHeight,
 	contentHeight,
 	containerWidth,
 	windowInnerWidth,
@@ -225,8 +223,9 @@ export function useScaleCanvas( {
 		);
 		iframeDocument.documentElement.style.setProperty(
 			'--wp-block-editor-iframe-zoom-out-inner-height',
-			`${ iframeWindowInnerHeight }px`
+			`${ iframeDocument.documentElement.clientHeight }px`
 		);
+
 		iframeDocument.documentElement.style.setProperty(
 			'--wp-block-editor-iframe-zoom-out-container-width',
 			`${ containerWidth }px`
@@ -262,7 +261,6 @@ export function useScaleCanvas( {
 		scale,
 		frameSize,
 		iframeDocument,
-		iframeWindowInnerHeight,
 		contentHeight,
 		containerWidth,
 		windowInnerWidth,
