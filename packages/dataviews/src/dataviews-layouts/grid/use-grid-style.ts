@@ -13,7 +13,7 @@ export default function useGridStyle( view: ViewGrid ) {
 	const isHuge = useViewportMatch( 'huge' );
 	const isXlarge = useViewportMatch( 'xlarge' );
 	const isMedium = useViewportMatch( 'small' );
-	// The `medium` density (default) is handled with css. If another density is selected,
+	// The `balanced` density (default) is handled with css. If another density is selected,
 	// we query the viewport to determine the number of columns to display per option.
 	if ( ! [ 'comfortable', 'compact' ].includes( view.density as Density ) ) {
 		return;

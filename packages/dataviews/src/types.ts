@@ -247,7 +247,7 @@ export interface NormalizedFilter {
 	isPrimary: boolean;
 }
 
-export type Density = 'compact' | 'medium' | 'comfortable';
+export type Density = 'compact' | 'balanced' | 'comfortable';
 
 interface ViewBase {
 	/**

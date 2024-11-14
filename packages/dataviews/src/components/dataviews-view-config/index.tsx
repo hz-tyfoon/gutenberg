@@ -11,7 +11,7 @@ import {
 	__experimentalDropdownContentWrapper as DropdownContentWrapper,
 	Dropdown,
 	__experimentalToggleGroupControl as ToggleGroupControl,
-	__experimentalToggleGroupControlOption as ToggleGroupControlOption,
+	// __experimentalToggleGroupControlOption as ToggleGroupControlOption,
 	__experimentalToggleGroupControlOptionIcon as ToggleGroupControlOptionIcon,
 	SelectControl,
 	__experimentalItemGroup as ItemGroup,
@@ -200,84 +200,92 @@ function SortDirectionControl() {
 	);
 }
 
-const PAGE_SIZE_VALUES = [ 10, 20, 50, 100 ];
+const PAGE_SIZE_VALUES = [ '10', '20', '50', '100' ];
 function ItemsPerPageControl() {
 	const { view, onChangeView } = useContext( DataViewsContext );
 	return (
-		<ToggleGroupControl
+		<SelectControl
 			__nextHasNoMarginBottom
 			__next40pxDefaultSize
-			isBlock
 			label={ __( 'Items per page' ) }
-			value={ view.perPage || 10 }
-			disabled={ ! view?.sort?.field }
+			value={ view.perPage ? view.perPage.toString() : '10' }
+			options={ PAGE_SIZE_VALUES.map( ( value ) => ( {
+				value,
+				label: value,
+			} ) ) }
 			onChange={ ( newItemsPerPage ) => {
-				const newItemsPerPageNumber =
-					typeof newItemsPerPage === 'number' ||
-					newItemsPerPage === undefined
-						? newItemsPerPage
-						: parseInt( newItemsPerPage, 10 );
 				onChangeView( {
 					...view,
-					perPage: newItemsPerPageNumber,
+					perPage: parseInt( newItemsPerPage, 10 ),
 					page: 1,
 				} );
 			} }
-		>
-			{ PAGE_SIZE_VALUES.map( ( value ) => {
-				return (
-					<ToggleGroupControlOption
-						key={ value }
-						value={ value }
-						label={ value.toString() }
-					/>
-				);
-			} ) }
-		</ToggleGroupControl>
+		/>
 	);
+	// return (
+	// 	<ToggleGroupControl
+	// 		__nextHasNoMarginBottom
+	// 		__next40pxDefaultSize
+	// 		isBlock
+	// 		label={ __( 'Items per page' ) }
+	// 		value={ view.perPage || 10 }
+	// 		disabled={ ! view?.sort?.field }
+	// 		onChange={ ( newItemsPerPage ) => {
+	// 			const newItemsPerPageNumber =
+	// 				typeof newItemsPerPage === 'number' ||
+	// 				newItemsPerPage === undefined
+	// 					? newItemsPerPage
+	// 					: parseInt( newItemsPerPage, 10 );
+	// 			onChangeView( {
+	// 				...view,
+	// 				perPage: newItemsPerPageNumber,
+	// 				page: 1,
+	// 			} );
+	// 		} }
+	// 	>
+	// 		{ PAGE_SIZE_VALUES.map( ( value ) => {
+	// 			return (
+	// 				<ToggleGroupControlOption
+	// 					key={ value }
+	// 					value={ value }
+	// 					label={ value.toString() }
+	// 				/>
+	// 			);
+	// 		} ) }
+	// 	</ToggleGroupControl>
+	// );
 }
 
+const densityPickerOptions = [
+	{
+		value: 'comfortable',
+		label: _x( 'Comfortable', 'Density option for DataView layout' ),
+	},
+	{
+		value: 'balanced',
+		label: _x( 'Balanced', 'Density option for DataView layout' ),
+	},
+	{
+		value: 'compact',
+		label: _x( 'Compact', 'Density option for DataView layout' ),
+	},
+];
 function DensityPicker() {
 	const { view, onChangeView } = useContext( DataViewsContext );
-	if (
-		! VIEW_LAYOUTS.find( ( layout ) => layout.type === view.type )
-			?.supportsDensity
-	) {
-		return null;
-	}
 	return (
-		<ToggleGroupControl
+		<SelectControl
 			__nextHasNoMarginBottom
-			size="__unstable-large"
+			__next40pxDefaultSize
 			label={ __( 'Density' ) }
-			value={ view.density || 'medium' }
+			value={ view.density || 'balanced' }
+			options={ densityPickerOptions }
 			onChange={ ( value ) => {
 				onChangeView( {
 					...view,
 					density: value as Density,
 				} );
 			} }
-			isBlock
-		>
-			<ToggleGroupControlOption
-				key="comfortable"
-				value="comfortable"
-				label={ _x(
-					'Comfortable',
-					'Density option for DataView layout'
-				) }
-			/>
-			<ToggleGroupControlOption
-				key="medium"
-				value="medium"
-				label={ _x( 'Medium', 'Density option for DataView layout' ) }
-			/>
-			<ToggleGroupControlOption
-				key="compact"
-				value="compact"
-				label={ _x( 'Compact', 'Density option for DataView layout' ) }
-			/>
-		</ToggleGroupControl>
+		/>
 	);
 }
 
@@ -559,7 +567,10 @@ function DataviewsViewConfigDropdown() {
 		_DataViewsViewConfig,
 		'dataviews-view-config-dropdown'
 	);
-
+	const { view } = useContext( DataViewsContext );
+	const layoutSupportsDensity = !! VIEW_LAYOUTS.find(
+		( layout ) => layout.type === view.type
+	)?.supportsDensity;
 	return (
 		<Dropdown
 			popoverProps={ {
@@ -586,8 +597,14 @@ function DataviewsViewConfigDropdown() {
 								<SortFieldControl />
 								<SortDirectionControl />
 							</HStack>
-							<DensityPicker />
-							<ItemsPerPageControl />
+							{ ! layoutSupportsDensity ? (
+								<ItemsPerPageControl />
+							) : (
+								<HStack expanded className="is-divided-in-two">
+									<DensityPicker />
+									<ItemsPerPageControl />
+								</HStack>
+							) }
 						</SettingsSection>
 						<SettingsSection title={ __( 'Properties' ) }>
 							<FieldControl />
