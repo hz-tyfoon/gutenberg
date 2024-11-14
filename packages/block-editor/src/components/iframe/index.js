@@ -14,12 +14,7 @@ import {
 	useEffect,
 } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import {
-	useResizeObserver,
-	useMergeRefs,
-	useRefEffect,
-	useDisabled,
-} from '@wordpress/compose';
+import { useMergeRefs, useRefEffect, useDisabled } from '@wordpress/compose';
 import { __experimentalStyleProvider as StyleProvider } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 
@@ -126,10 +121,6 @@ function Iframe( {
 	const [ bodyClasses, setBodyClasses ] = useState( [] );
 	const clearerRef = useBlockSelectionClearer();
 	const [ before, writingFlowRef, after ] = useWritingFlow();
-	const [ contentResizeListener, { height: contentHeight } ] =
-		useResizeObserver();
-	const [ containerResizeListener, { width: containerWidth } ] =
-		useResizeObserver();
 
 	const setRef = useRefEffect( ( node ) => {
 		node._load = () => {
@@ -225,12 +216,15 @@ function Iframe( {
 		};
 	}, [] );
 
-	const { isZoomedOut, scaleContainerWidth } = useScaleCanvas( {
+	const {
+		contentResizeListener,
+		containerResizeListener,
+		isZoomedOut,
+		scaleContainerWidth,
+	} = useScaleCanvas( {
 		scale,
 		frameSize: parseInt( frameSize ),
 		iframeDocument,
-		contentHeight,
-		containerWidth,
 	} );
 
 	const disabledRef = useDisabled( { isDisabled: ! readonly } );

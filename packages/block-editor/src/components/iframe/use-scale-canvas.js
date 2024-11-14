@@ -2,7 +2,7 @@
  * WordPress dependencies
  */
 import { useEffect, useRef, useState } from '@wordpress/element';
-import { useReducedMotion } from '@wordpress/compose';
+import { useReducedMotion, useResizeObserver } from '@wordpress/compose';
 
 function calculateScale( {
 	frameSize,
@@ -21,21 +21,28 @@ function calculateScale( {
  * the states.
  *
  * @param {Object}        root0
- * @param {number}        root0.containerWidth    The width of the container.
- * @param {number}        root0.contentHeight     The height of the content in the iframe.
  * @param {number}        root0.frameSize         The size of the frame around the content.
  * @param {Document}      root0.iframeDocument    The document of the iframe.
  * @param {number}        root0.maxContainerWidth The max width of the canvas to use as the starting scale point.
  * @param {number|string} root0.scale             The scale of the canvas. Can be an decimal between 0 and 1, 1, or 'auto-scaled'.
+ *
+ * @return {Object} An object containing the following properties:
+ *                  isZoomedOut: A boolean indicating if the canvas is zoomed out.
+ *                  scaleContainerWidth: The width of the container used to calculate the scale.
+ *                  contentResizeListener: A resize observer for the content.
+ *                  containerResizeListener: A resize observer for the container.
  */
 export function useScaleCanvas( {
-	containerWidth,
-	contentHeight,
 	frameSize,
 	iframeDocument,
 	maxContainerWidth = 750,
 	scale,
 } ) {
+	const [ contentResizeListener, { height: contentHeight } ] =
+		useResizeObserver();
+	const [ containerResizeListener, { width: containerWidth } ] =
+		useResizeObserver();
+
 	const initialContainerWidthRef = useRef( 0 );
 	const isZoomedOut = scale !== 1;
 
@@ -338,5 +345,7 @@ export function useScaleCanvas( {
 	return {
 		isZoomedOut,
 		scaleContainerWidth,
+		contentResizeListener,
+		containerResizeListener,
 	};
 }
