@@ -16,7 +16,7 @@
 	// We don't want to animate the transform of the translateX because it is used
 	// to "center" the canvas. Leaving it on causes the canvas to slide around in
 	// odd ways.
-	@include editor-canvas-resize-animation( transform 0s, scale 0s, padding 0s, translate 0s);
+	@include editor-canvas-resize-animation(transform 0s, scale 0s, padding 0s, translate 0s);
 
 	&.zoom-out-animation {
 		$scroll-top: var(--wp-block-editor-iframe-zoom-out-scroll-top, 0);
@@ -35,7 +35,7 @@
 		// We only want to animate the scaling when entering zoom out. When sidebars
 		// are toggled, the resizing of the iframe handles scaling the canvas as well,
 		// and the doubled animations cause very odd animations.
-		@include editor-canvas-resize-animation( transform 0s, top 0s, bottom 0s, right 0s, left 0s );
+		@include editor-canvas-resize-animation(transform 0s, top 0s, bottom 0s, right 0s, left 0s);
 	}
 
 	&.is-zoomed-out {
