@@ -2317,7 +2317,7 @@ const withPatternBlockEditingModes = ( reducer ) => {
 	};
 };
 
-function getInsertedBlocksEditingModes(
+function getSectionBlockEditingModesForInsertions(
 	state,
 	rootClientId,
 	insertedBlocks,
@@ -2325,18 +2325,18 @@ function getInsertedBlocksEditingModes(
 ) {
 	const editingModes = new Map();
 	const sectionRootClientId = state.settings?.[ sectionRootClientIdKey ];
-	const topLevelBlocksAreSections = rootClientId === sectionRootClientId;
-	const topLevelBlocksAreWithinSections =
-		! topLevelBlocksAreSections && isWithinSection( state, rootClientId );
+	const insertedBlocksAreSections = rootClientId === sectionRootClientId;
+	const insertedBlocksAreWithinSections =
+		! insertedBlocksAreSections && isWithinSection( state, rootClientId );
 
 	for ( const block of insertedBlocks ) {
-		if ( topLevelBlocksAreSections ) {
+		if ( insertedBlocksAreSections ) {
 			editingModes.set( block.clientId, 'contentOnly' );
 		}
 
 		if ( includeContentOnlyChildren ) {
 			if (
-				topLevelBlocksAreWithinSections &&
+				insertedBlocksAreWithinSections &&
 				isContentBlock( block.name )
 			) {
 				editingModes.set( block.clientId, 'contentOnly' );
@@ -2360,8 +2360,12 @@ function getSectionBlockEditingModes(
 	const sectionBlockEditingModes = new Map();
 	const sectionRootClientId = state.settings?.[ sectionRootClientIdKey ];
 	sectionBlockEditingModes.set( sectionRootClientId, 'contentOnly' );
-
 	const sectionClientIds = state.blocks.order.get( sectionRootClientId );
+
+	if ( ! sectionClientIds?.length ) {
+		return sectionBlockEditingModes;
+	}
+
 	for ( const sectionClientId of sectionClientIds ) {
 		sectionBlockEditingModes.set( sectionClientId, 'contentOnly' );
 
@@ -2404,12 +2408,13 @@ const withSectionBlockEditingModes = ( reducer ) => ( state, action ) => {
 		'navigation';
 
 	switch ( action.type ) {
+		case 'RESET_BLOCKS':
 		case 'INSERT_BLOCKS':
 		case 'RECEIVE_BLOCKS': {
 			if ( isZoomedOut || isNavMode ) {
-				const rootClientId = action.rootClientId;
+				const rootClientId = action.rootClientId ?? '';
 				const insertedBlocks = action.blocks;
-				const insertions = getInsertedBlocksEditingModes(
+				const insertions = getSectionBlockEditingModesForInsertions(
 					newState,
 					rootClientId,
 					insertedBlocks,
@@ -2447,7 +2452,7 @@ const withSectionBlockEditingModes = ( reducer ) => ( state, action ) => {
 				const insertedBlocks = action.blocks;
 
 				// Update modes for the inserted blocks.
-				const insertions = getInsertedBlocksEditingModes(
+				const insertions = getSectionBlockEditingModesForInsertions(
 					newState,
 					rootClientId,
 					insertedBlocks,
@@ -2498,7 +2503,7 @@ const withSectionBlockEditingModes = ( reducer ) => ( state, action ) => {
 				const insertedBlocks = clientIds.map( ( clientId ) =>
 					newState.blocks.tree.get( clientId )
 				);
-				const insertions = getInsertedBlocksEditingModes(
+				const insertions = getSectionBlockEditingModesForInsertions(
 					newState,
 					toRootClientId,
 					insertedBlocks,
@@ -2512,6 +2517,7 @@ const withSectionBlockEditingModes = ( reducer ) => ( state, action ) => {
 
 			break;
 		}
+		case 'UPDATE_SETTINGS':
 		case 'SET_EDITOR_MODE':
 		case 'RESET_ZOOM_LEVEL':
 		case 'SET_ZOOM_LEVEL': {
