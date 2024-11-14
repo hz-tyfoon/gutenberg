@@ -21,25 +21,35 @@ function calculateScale( {
  * the states.
  *
  * @param {Object}        root0
- * @param {number}        root0.containerWidth      The width of the container.
- * @param {number}        root0.contentHeight       The height of the content in the iframe.
- * @param {number}        root0.frameSize           The size of the frame around the content.
- * @param {Document}      root0.iframeDocument      The document of the iframe.
- * @param {boolean}       root0.isZoomedOut         Whether the canvas is in zoom out mode.
- * @param {number}        root0.maxContainerWidth   The max width of the canvas to use as the starting scale point.
- * @param {number|string} root0.scale               The scale of the canvas. Default to 'auto-scaled'.
- * @param {number}        root0.scaleContainerWidth The width of the outer container used to calculate the scale.
+ * @param {number}        root0.containerWidth    The width of the container.
+ * @param {number}        root0.contentHeight     The height of the content in the iframe.
+ * @param {number}        root0.frameSize         The size of the frame around the content.
+ * @param {Document}      root0.iframeDocument    The document of the iframe.
+ * @param {number}        root0.maxContainerWidth The max width of the canvas to use as the starting scale point.
+ * @param {number|string} root0.scale             The scale of the canvas. Can be an decimal between 0 and 1, 1, or 'auto-scaled'.
  */
 export function useScaleCanvas( {
 	containerWidth,
 	contentHeight,
 	frameSize,
 	iframeDocument,
-	isZoomedOut,
 	maxContainerWidth = 750,
 	scale,
-	scaleContainerWidth,
 } ) {
+	const initialContainerWidthRef = useRef( 0 );
+	const isZoomedOut = scale !== 1;
+
+	useEffect( () => {
+		if ( ! isZoomedOut ) {
+			initialContainerWidthRef.current = containerWidth;
+		}
+	}, [ containerWidth, isZoomedOut ] );
+
+	const scaleContainerWidth = Math.max(
+		initialContainerWidthRef.current,
+		containerWidth
+	);
+
 	const prefersReducedMotion = useReducedMotion();
 	const [ isAnimatingZoomOut, setIsAnimatingZoomOut ] = useState( false );
 	const transitionToRef = useRef( {
@@ -324,4 +334,9 @@ export function useScaleCanvas( {
 			// );
 		};
 	}, [ iframeDocument, isZoomedOut, setIsAnimatingZoomOut ] );
+
+	return {
+		isZoomedOut,
+		scaleContainerWidth,
+	};
 }

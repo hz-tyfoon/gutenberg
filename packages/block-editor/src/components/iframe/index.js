@@ -12,7 +12,6 @@ import {
 	forwardRef,
 	useMemo,
 	useEffect,
-	useRef,
 } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import {
@@ -124,7 +123,6 @@ function Iframe( {
 	const { styles = '', scripts = '' } = resolvedAssets;
 	/** @type {[Document, import('react').Dispatch<Document>]} */
 	const [ iframeDocument, setIframeDocument ] = useState();
-	const initialContainerWidthRef = useRef( 0 );
 	const [ bodyClasses, setBodyClasses ] = useState( [] );
 	const clearerRef = useBlockSelectionClearer();
 	const [ before, writingFlowRef, after ] = useWritingFlow();
@@ -227,27 +225,12 @@ function Iframe( {
 		};
 	}, [] );
 
-	const isZoomedOut = scale !== 1;
-
-	useEffect( () => {
-		if ( ! isZoomedOut ) {
-			initialContainerWidthRef.current = containerWidth;
-		}
-	}, [ containerWidth, isZoomedOut ] );
-
-	const scaleContainerWidth = Math.max(
-		initialContainerWidthRef.current,
-		containerWidth
-	);
-
-	useScaleCanvas( {
+	const { isZoomedOut, scaleContainerWidth } = useScaleCanvas( {
 		scale,
 		frameSize: parseInt( frameSize ),
 		iframeDocument,
 		contentHeight,
 		containerWidth,
-		isZoomedOut,
-		scaleContainerWidth,
 	} );
 
 	const disabledRef = useDisabled( { isDisabled: ! readonly } );
