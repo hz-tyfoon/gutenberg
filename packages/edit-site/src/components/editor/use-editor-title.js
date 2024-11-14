@@ -4,22 +4,24 @@
 import { _x, sprintf } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
-import { store as editorStore } from '@wordpress/editor';
 import { decodeEntities } from '@wordpress/html-entities';
+import { privateApis as editorPrivateApis } from '@wordpress/editor';
 
 /**
  * Internal dependencies
  */
 import useTitle from '../routes/use-title';
 import { POST_TYPE_LABELS, TEMPLATE_POST_TYPE } from '../../utils/constants';
+import { unlock } from '../../lock-unlock';
+
+const { getTemplateInfo } = unlock( editorPrivateApis );
 
 function useEditorTitle( postType, postId ) {
 	const { title, isLoaded } = useSelect(
 		( select ) => {
 			const { getEditedEntityRecord, hasFinishedResolution } =
 				select( coreStore );
-			const { __experimentalGetTemplateInfo: getTemplateInfo } =
-				select( editorStore );
+
 			const _record = getEditedEntityRecord(
 				'postType',
 				postType,
