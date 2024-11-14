@@ -9,12 +9,21 @@ import fastDeepEqual from 'fast-deep-equal/es6';
 import { pipe } from '@wordpress/compose';
 import { combineReducers, select } from '@wordpress/data';
 import deprecated from '@wordpress/deprecated';
-import { store as blocksStore } from '@wordpress/blocks';
+import {
+	store as blocksStore,
+	privateApis as blocksPrivateApis,
+} from '@wordpress/blocks';
+import { store as preferencesStore } from '@wordpress/preferences';
+
 /**
  * Internal dependencies
  */
 import { PREFERENCES_DEFAULTS, SETTINGS_DEFAULTS } from './defaults';
 import { insertAt, moveTo } from './array';
+import { sectionRootClientIdKey } from './private-keys';
+import { unlock } from '../lock-unlock';
+
+const { isContentBlock } = unlock( blocksPrivateApis );
 
 const identity = ( x ) => x;
 
@@ -2295,6 +2304,242 @@ const withPatternBlockEditingModes = ( reducer ) => {
 	};
 };
 
+function recurseInnerBlocks( block, callback ) {
+	block.innerBlocks?.forEach( ( innerBlock ) => {
+		callback( innerBlock );
+		recurseInnerBlocks( innerBlock, callback );
+	} );
+}
+
+function isWithinSection( state, clientId ) {
+	const sectionRootClientId = state.settings?.[ sectionRootClientIdKey ];
+	const sectionClientIds = state.blocks.order.get( sectionRootClientId );
+	let parent = state.blocks.parents.get( clientId );
+	while ( !! parent ) {
+		if ( sectionClientIds.includes( parent ) ) {
+			return true;
+		}
+		parent = state.blocks.parents.get( parent );
+	}
+}
+
+function getInsertedBlocksEditingModes(
+	state,
+	rootClientId,
+	insertedBlocks,
+	{ includeContentOnlyChildren = false }
+) {
+	const editingModes = new Map();
+	const sectionRootClientId = state.settings?.[ sectionRootClientIdKey ];
+	const topLevelBlocksAreSections = rootClientId === sectionRootClientId;
+	const topLevelBlocksAreWithinSections =
+		! topLevelBlocksAreSections && isWithinSection( state, rootClientId );
+
+	for ( const block of insertedBlocks ) {
+		if ( topLevelBlocksAreSections ) {
+			editingModes.set( block.clientId, 'contentOnly' );
+		}
+
+		if ( includeContentOnlyChildren ) {
+			if (
+				topLevelBlocksAreWithinSections &&
+				isContentBlock( block.name )
+			) {
+				editingModes.set( block.clientId, 'contentOnly' );
+			}
+
+			recurseInnerBlocks( block, ( innerBlock ) => {
+				if ( isContentBlock( innerBlock.name ) ) {
+					editingModes.set( innerBlock.clientId, 'contentOnly' );
+				}
+			} );
+		}
+	}
+
+	return editingModes;
+}
+
+function getSectionBlockEditingModes(
+	state,
+	{ includeContentOnlyChildren = false }
+) {
+	const sectionBlockEditingModes = new Map();
+	const sectionRootClientId = state.settings?.[ sectionRootClientIdKey ];
+	sectionBlockEditingModes.set( sectionRootClientId, 'contentOnly' );
+
+	const sectionClientIds = state.blocks.order.get( sectionRootClientId );
+	for ( const sectionClientId of sectionClientIds ) {
+		sectionBlockEditingModes.set( sectionClientId, 'contentOnly' );
+
+		if ( includeContentOnlyChildren ) {
+			const sectionTree = state.blocks.tree.get( sectionClientId );
+
+			recurseInnerBlocks( sectionTree, ( block ) => {
+				if ( isContentBlock( block.name ) ) {
+					sectionBlockEditingModes.set(
+						block.clientId,
+						'contentOnly'
+					);
+				}
+			} );
+		}
+	}
+
+	return sectionBlockEditingModes;
+}
+
+const withSectionBlockEditingModes = ( reducer ) => ( state, action ) => {
+	const newState = reducer( state, action );
+
+	// An exception is needed here to still recompute the block editing modes when
+	// the editor mode changes since the editor mode isn't stored within the
+	// block editor state and changing it won't trigger an altered new state.
+	if ( action.type !== 'SET_EDITOR_MODE' && newState === state ) {
+		return state;
+	}
+
+	newState.defaultBlockEditingMode =
+		state?.defaultBlockEditingMode ?? 'default';
+	newState.sectionBlockEditingModes =
+		state?.sectionBlockEditingModes ?? new Map();
+
+	const isZoomedOut =
+		newState?.zoomLevel < 100 || newState?.zoomLevel === 'auto-scaled';
+	const isNavMode =
+		select( preferencesStore )?.get( 'core', 'editorTool' ) ===
+		'navigation';
+
+	switch ( action.type ) {
+		case 'INSERT_BLOCKS':
+		case 'RECEIVE_BLOCKS': {
+			if ( isZoomedOut || isNavMode ) {
+				const rootClientId = action.rootClientId;
+				const insertedBlocks = action.blocks;
+				const insertions = getInsertedBlocksEditingModes(
+					newState,
+					rootClientId,
+					insertedBlocks,
+					{ includeContentOnlyChildren: isNavMode }
+				);
+				newState.sectionBlockEditingModes = new Map( [
+					...newState.sectionBlockEditingModes,
+					...insertions,
+				] );
+			}
+
+			break;
+		}
+		case 'REPLACE_BLOCKS': {
+			if ( isZoomedOut || isNavMode ) {
+				const removedClientIds = action.clientIds;
+
+				// Remove modes for the removed blocks.
+				for ( const clientId of removedClientIds ) {
+					newState.sectionBlockEditingModes.delete( clientId );
+
+					// It's important `state` is used here instead of `newState` because
+					// the blocks will have already been removed from the new state.
+					const tree = state.blocks.tree.get( clientId );
+					recurseInnerBlocks( tree, ( childClientId ) =>
+						newState.sectionBlockEditingModes.delete(
+							childClientId
+						)
+					);
+				}
+
+				const rootClientId = state.blocks.parents.get(
+					removedClientIds[ 0 ]
+				);
+				const insertedBlocks = action.blocks;
+
+				// Update modes for the inserted blocks.
+				const insertions = getInsertedBlocksEditingModes(
+					newState,
+					rootClientId,
+					insertedBlocks,
+					{ includeContentOnlyChildren: isNavMode }
+				);
+				newState.sectionBlockEditingModes = new Map( [
+					...newState.sectionBlockEditingModes,
+					...insertions,
+				] );
+			}
+			break;
+		}
+		case 'REMOVE_BLOCKS': {
+			if ( isZoomedOut || isNavMode ) {
+				// Remove modes for the removed blocks.
+				for ( const clientId of action.clientIds ) {
+					newState.sectionBlockEditingModes.delete( clientId );
+
+					// It's important `state` is used here instead of `newState` because
+					// the blocks will have already been removed from the new state.
+					const tree = state.blocks.tree.get( clientId );
+					recurseInnerBlocks( tree, ( childClientId ) =>
+						newState.sectionBlockEditingModes.delete(
+							childClientId
+						)
+					);
+				}
+			}
+			break;
+		}
+		case 'MOVE_BLOCKS_TO_POSITION': {
+			if ( isZoomedOut || isNavMode ) {
+				const { toRootClientId, clientIds } = action;
+
+				for ( const clientId of clientIds ) {
+					newState.sectionBlockEditingModes.delete( clientId );
+
+					// It's important `state` is used here instead of `newState` because
+					// the blocks will have already been removed from the new state.
+					const tree = state.blocks.tree.get( clientId );
+					recurseInnerBlocks( tree, ( childClientId ) =>
+						newState.sectionBlockEditingModes.delete(
+							childClientId
+						)
+					);
+				}
+
+				const insertedBlocks = clientIds.map( ( clientId ) =>
+					newState.blocks.tree.get( clientId )
+				);
+				const insertions = getInsertedBlocksEditingModes(
+					newState,
+					toRootClientId,
+					insertedBlocks,
+					{ includeContentOnlyChildren: isNavMode }
+				);
+				newState.sectionBlockEditingModes = new Map( [
+					...newState.sectionBlockEditingModes,
+					...insertions,
+				] );
+			}
+
+			break;
+		}
+		case 'SET_EDITOR_MODE':
+		case 'SET_ZOOM_LEVEL': {
+			if ( isZoomedOut || isNavMode ) {
+				// When there are sections, the majority of blocks are disabled,
+				// so the default is set to disabled, which avoids the need to iterate
+				// every through blocks that are adjacent to or ancestors of the section root.
+				newState.defaultBlockEditingMode = 'disabled';
+				newState.sectionBlockEditingModes = getSectionBlockEditingModes(
+					newState,
+					{ includeContentOnlyChildren: isNavMode }
+				);
+			} else {
+				newState.defaultBlockEditingMode = 'default';
+				newState.sectionBlockEditingModes = new Map();
+			}
+			break;
+		}
+	}
+
+	return newState;
+};
+
 function withAutomaticChangeReset( reducer ) {
 	return ( state, action ) => {
 		const nextState = reducer( state, action );
@@ -2349,5 +2594,5 @@ function withAutomaticChangeReset( reducer ) {
 }
 
 export default withPatternBlockEditingModes(
-	withAutomaticChangeReset( combinedReducers )
+	withSectionBlockEditingModes( withAutomaticChangeReset( combinedReducers ) )
 );

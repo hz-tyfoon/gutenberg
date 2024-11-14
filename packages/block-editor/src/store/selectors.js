@@ -2997,14 +2997,6 @@ export function __unstableIsWithinBlockOverlay( state, clientId ) {
 	return false;
 }
 
-function isWithinBlock( state, clientId, parentClientId ) {
-	let parent = state.blocks.parents.get( clientId );
-	while ( !! parent && parent !== parentClientId ) {
-		parent = state.blocks.parents.get( parent );
-	}
-	return parent === parentClientId;
-}
-
 /**
  * @typedef {import('../components/block-editing-mode').BlockEditingMode} BlockEditingMode
  */
@@ -3046,72 +3038,15 @@ export const getBlockEditingMode = createRegistrySelector(
 				clientId = '';
 			}
 
-			// In zoom-out mode, override the behavior set by
-			// __unstableSetBlockEditingMode to only allow editing the top-level
-			// sections.
-			if ( isZoomOut( state ) ) {
-				const sectionRootClientId = getSectionRootClientId( state );
-
-				if ( clientId === '' /* ROOT_CONTAINER_CLIENT_ID */ ) {
-					return sectionRootClientId ? 'disabled' : 'contentOnly';
-				}
-				if ( clientId === sectionRootClientId ) {
-					return 'contentOnly';
-				}
-				const sectionsClientIds = getBlockOrder(
-					state,
-					sectionRootClientId
-				);
-
-				// Sections are always contentOnly.
-				if ( sectionsClientIds?.includes( clientId ) ) {
-					return 'contentOnly';
-				}
-
-				return 'disabled';
-			}
-
-			if ( state?.patternBlockEditingModes?.has( clientId ) ) {
+			if (
+				! isZoomOut( state ) &&
+				state?.patternBlockEditingModes?.has( clientId )
+			) {
 				return state?.patternBlockEditingModes.get( clientId );
 			}
 
-			const editorMode = __unstableGetEditorMode( state );
-			if ( editorMode === 'navigation' ) {
-				const sectionRootClientId = getSectionRootClientId( state );
-
-				// The root section is "default mode"
-				if ( clientId === sectionRootClientId ) {
-					return 'default';
-				}
-
-				// Sections should always be contentOnly in navigation mode.
-				const sectionsClientIds = getBlockOrder(
-					state,
-					sectionRootClientId
-				);
-				if ( sectionsClientIds.includes( clientId ) ) {
-					return 'contentOnly';
-				}
-
-				// Blocks outside sections should be disabled.
-				const isWithinSectionRoot = isWithinBlock(
-					state,
-					clientId,
-					sectionRootClientId
-				);
-				if ( ! isWithinSectionRoot ) {
-					return 'disabled';
-				}
-
-				// The rest of the blocks depend on whether they are content blocks or not.
-				// This "flattens" the sections tree.
-				const name = getBlockName( state, clientId );
-				const { hasContentRoleAttribute } = unlock(
-					select( blocksStore )
-				);
-				const isContent = hasContentRoleAttribute( name );
-
-				return isContent ? 'contentOnly' : 'disabled';
+			if ( state.sectionBlockEditingModes?.has( clientId ) ) {
+				return state.sectionBlockEditingModes.get( clientId );
 			}
 
 			// In normal mode, consider that an explicitely set editing mode takes over.
@@ -3121,8 +3056,8 @@ export const getBlockEditingMode = createRegistrySelector(
 			}
 
 			// In normal mode, top level is default mode.
-			if ( ! clientId ) {
-				return 'default';
+			if ( clientId === '' ) {
+				return state.defaultBlockEditingMode ?? 'default';
 			}
 
 			const rootClientId = getBlockRootClientId( state, clientId );
@@ -3138,7 +3073,8 @@ export const getBlockEditingMode = createRegistrySelector(
 			}
 			// Otherwise, check if there's an ancestor that is contentOnly
 			const parentMode = getBlockEditingMode( state, rootClientId );
-			return parentMode === 'contentOnly' ? 'default' : parentMode;
+			const defaultMode = state.defaultBlockEditingMode ?? 'default';
+			return parentMode === 'contentOnly' ? defaultMode : parentMode;
 		}
 );
 

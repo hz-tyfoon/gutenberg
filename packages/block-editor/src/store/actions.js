@@ -1669,7 +1669,7 @@ export const setNavigationMode =
  */
 export const __unstableSetEditorMode =
 	( mode ) =>
-	( { registry } ) => {
+	( { registry, dispatch } ) => {
 		registry.dispatch( preferencesStore ).set( 'core', 'editorTool', mode );
 
 		if ( mode === 'navigation' ) {
@@ -1677,6 +1677,8 @@ export const __unstableSetEditorMode =
 		} else if ( mode === 'edit' ) {
 			speak( __( 'You are currently in Design mode.' ) );
 		}
+
+		dispatch( { type: 'SET_EDITOR_MODE', mode } );
 	};
 
 /**
