@@ -4,11 +4,6 @@
 import blockLibraryStyles from '!!raw-loader!../../../../../block-library/build-style/style.css';
 
 /**
- * WordPress dependencies
- */
-import { useAsyncList } from '@wordpress/compose';
-
-/**
  * Internal dependencies
  */
 import BlockPatternsList from '../';
@@ -26,13 +21,9 @@ export default {
 
 export const Default = {
 	render: function Template( props ) {
-		const shownPatterns = useAsyncList( props.blockPatterns );
 		return (
 			<ExperimentalBlockEditorProvider settings={ blockEditorSettings }>
-				<BlockPatternsList
-					shownPatterns={ shownPatterns }
-					{ ...props }
-				/>
+				<BlockPatternsList { ...props } />
 			</ExperimentalBlockEditorProvider>
 		);
 	},
@@ -40,7 +31,6 @@ export const Default = {
 		blockPatterns: patterns,
 		isDraggable: false,
 		label: 'Block patterns story',
-		showTitle: true,
 		showTitlesAsTooltip: false,
 	},
 	argTypes: {
@@ -49,18 +39,11 @@ export const Default = {
 			description:
 				'Usually this component is used with `useAsyncList` for performance reasons and you should provide the returned list from that hook. Alternatively it should have the same value with `blockPatterns`.',
 		},
-		showTitle: {
-			description: 'Whether to render the title of each pattern.',
-			table: {
-				defaultValue: { summary: true },
-				type: { summary: 'boolean' },
-			},
-		},
 		onClickPattern: { type: 'function' },
 		onHover: { type: 'function' },
 		showTitlesAsTooltip: {
 			description:
-				'Whether to render the title of each pattern as a tooltip. If enabled, it takes precedence over `showTitle` prop.',
+				'Whether to render the title of each pattern as a tooltip. If enabled',
 		},
 		orientation: {
 			description: 'Orientation for the underlying composite widget.',

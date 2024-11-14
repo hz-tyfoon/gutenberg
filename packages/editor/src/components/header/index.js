@@ -53,7 +53,6 @@ function Header( {
 	forceDisableBlockTools,
 	setEntitiesSavedStatesCallback,
 	title,
-	isEditorIframed,
 } ) {
 	const isWideViewport = useViewportMatch( 'large' );
 	const isLargeViewport = useViewportMatch( 'medium' );
@@ -156,19 +155,21 @@ function Header( {
 					<PostSavedState forceIsDirty={ forceIsDirty } />
 				) }
 
-				{ canBeZoomedOut && isEditorIframed && isWideViewport && (
-					<ZoomOutToggle disabled={ forceDisableBlockTools } />
-				) }
+				<PostViewLink />
 
 				<PreviewDropdown
 					forceIsAutosaveable={ forceIsDirty }
 					disabled={ disablePreviewOption }
 				/>
+
 				<PostPreviewButton
 					className="editor-header__post-preview-button"
 					forceIsAutosaveable={ forceIsDirty }
 				/>
-				<PostViewLink />
+
+				{ canBeZoomedOut && isWideViewport && (
+					<ZoomOutToggle disabled={ forceDisableBlockTools } />
+				) }
 
 				{ ( isWideViewport || ! showIconLabels ) && (
 					<PinnedItems.Slot scope="core" />

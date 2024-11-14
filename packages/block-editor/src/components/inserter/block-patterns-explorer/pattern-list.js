@@ -85,10 +85,10 @@ function PatternList( {
 				return true;
 			}
 			if ( selectedCategory === 'uncategorized' ) {
-				const hasKnownCategory = pattern.categories.some(
-					( category ) =>
+				const hasKnownCategory =
+					pattern.categories?.some( ( category ) =>
 						registeredPatternCategories.includes( category )
-				);
+					) ?? false;
 
 				return ! pattern.categories?.length || ! hasKnownCategory;
 			}
@@ -151,9 +151,6 @@ function PatternList( {
 				{ hasItems && (
 					<>
 						<BlockPatternsList
-							shownPatterns={
-								pagingProps.categoryPatternsAsyncList
-							}
 							blockPatterns={ pagingProps.categoryPatterns }
 							onClickPattern={ onClickPattern }
 							isDraggable={ false }

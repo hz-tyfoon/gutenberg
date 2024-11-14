@@ -25,6 +25,7 @@
 	"main": "build/index.js",
 	"module": "build-module/index.js",
 	"react-native": "src/index",
+	"wpScript": true,
 	"types": "build-types",
 	"sideEffects": [
 		"build-style/**",
@@ -40,6 +41,7 @@
 		"@wordpress/core-data": "*",
 		"@wordpress/data": "*",
 		"@wordpress/dataviews": "*",
+		"@wordpress/date": "*",
 		"@wordpress/element": "*",
 		"@wordpress/hooks": "*",
 		"@wordpress/html-entities": "*",
@@ -62,6 +64,5 @@
 	},
 	"publishConfig": {
 		"access": "public"
-	},
-	"wpScript": true
+	}
 }

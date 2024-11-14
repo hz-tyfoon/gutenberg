@@ -26,6 +26,7 @@
 	"main": "build/index.js",
 	"module": "build-module/index.js",
 	"react-native": "src/index",
+	"wpScript": true,
 	"types": "build-types",
 	"sideEffects": false,
 	"dependencies": {
@@ -41,7 +42,7 @@
 		"equivalent-key-map": "^0.2.2",
 		"is-plain-object": "^5.0.0",
 		"is-promise": "^4.0.0",
-		"redux": "^4.1.2",
+		"redux": "^5.0.1",
 		"rememo": "^4.0.2",
 		"use-memo-one": "^1.1.1"
 	},
@@ -50,6 +51,5 @@
 	},
 	"publishConfig": {
 		"access": "public"
-	},
-	"wpScript": true
+	}
 }
