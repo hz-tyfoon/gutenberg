@@ -4,26 +4,40 @@
 import { useEffect, useRef, useState } from '@wordpress/element';
 import { useReducedMotion } from '@wordpress/compose';
 
+function calculateScale( {
+	frameSize,
+	containerWidth,
+	scaleContainerWidth,
+	maxContainerWidth,
+} ) {
+	return (
+		( Math.min( containerWidth, maxContainerWidth ) - frameSize * 2 ) /
+		scaleContainerWidth
+	);
+}
+
 /**
  * Handles scaling the canvas for the zoom out mode and animating between
  * the states.
  *
- * @param {Object}   root0
- * @param {number}   root0.contentHeight       The height of the content in the iframe.
- * @param {number}   root0.containerWidth      The width of the container.
- * @param {number}   root0.frameSize           The size of the frame around the content.
- * @param {Document} root0.iframeDocument      The document of the iframe.
- * @param {boolean}  root0.isZoomedOut         Whether the canvas is in zoom out mode.
- * @param {number}   root0.scale               The scale of the canvas.
- * @param {number}   root0.scaleContainerWidth The width of the container at the scaled size.
+ * @param {Object}        root0
+ * @param {number}        root0.containerWidth      The width of the container.
+ * @param {number}        root0.contentHeight       The height of the content in the iframe.
+ * @param {number}        root0.frameSize           The size of the frame around the content.
+ * @param {Document}      root0.iframeDocument      The document of the iframe.
+ * @param {boolean}       root0.isZoomedOut         Whether the canvas is in zoom out mode.
+ * @param {number}        root0.maxContainerWidth   The max width of the canvas to use as the starting scale point.
+ * @param {number|string} root0.scale               The scale of the canvas. Default to 'auto-scaled'.
+ * @param {number}        root0.scaleContainerWidth The width of the outer container used to calculate the scale.
  */
 export function useScaleCanvas( {
-	scale,
+	containerWidth,
+	contentHeight,
 	frameSize,
 	iframeDocument,
-	contentHeight,
-	containerWidth,
 	isZoomedOut,
+	maxContainerWidth = 750,
+	scale,
 	scaleContainerWidth,
 } ) {
 	const prefersReducedMotion = useReducedMotion();
@@ -35,6 +49,16 @@ export function useScaleCanvas( {
 	const prevScaleRef = useRef( scale );
 	const prevFrameSizeRef = useRef( frameSize );
 	const prevClientHeightRef = useRef( /* Initialized in the useEffect. */ );
+	const isAutoScaled = scale === 'auto-scaled';
+
+	const scaleValue = isAutoScaled
+		? calculateScale( {
+				frameSize,
+				containerWidth,
+				maxContainerWidth,
+				scaleContainerWidth,
+		  } )
+		: scale;
 
 	// New state for isZoomedOut in the iframe component. That state is updated when the animation is completed,
 	// which causes the rerender to happen. Things that are in refs, now become state. ZoomOutAnimation is a state.
@@ -187,8 +211,21 @@ export function useScaleCanvas( {
 		// We will update them after we add the animation class on next render.
 		iframeDocument.documentElement.style.setProperty(
 			'--wp-block-editor-iframe-zoom-out-scale',
-			scale
+			scaleValue
 		);
+
+		if ( isAutoScaled && prevScaleRef.current !== 1 ) {
+			// We need to update the appropriate scale to exit from. If sidebars have been opened since setting the
+			// original scale, we will snap to a much smaller scale due to the scale container changing size when exiting.
+			// We use containerWidth as the divisor, as scaleContainerWidth will always match the containerWidth when
+			// exiting.
+			prevScaleRef.current = calculateScale( {
+				containerWidth,
+				maxContainerWidth,
+				scaleContainerWidth: containerWidth,
+				frameSize: prevFrameSizeRef.current,
+			} );
+		}
 
 		// frameSize has to be a px value for the scaling and frame size to be computed correctly.
 		iframeDocument.documentElement.style.setProperty(
@@ -215,7 +252,7 @@ export function useScaleCanvas( {
 		);
 
 		transitionToRef.current = {
-			scale,
+			scale: scaleValue,
 			frameSize,
 		};
 
@@ -242,12 +279,13 @@ export function useScaleCanvas( {
 			// );
 		};
 	}, [
-		scale,
+		isAutoScaled,
+		scaleValue,
 		frameSize,
 		iframeDocument,
 		contentHeight,
 		containerWidth,
-		isZoomedOut,
+		maxContainerWidth,
 		scaleContainerWidth,
 	] );
 
