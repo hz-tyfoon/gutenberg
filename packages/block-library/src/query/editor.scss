@@ -49,6 +49,12 @@
 	}
 }
 
+.block-library-query-toolspanel__design {
+	.block-library-query-pattern__selection-search {
+		margin-bottom: $grid-unit-20;
+	}
+}
+
 .wp-block-query__enhanced-pagination-modal {
 	@include break-small() {
 		max-width: $break-mobile;

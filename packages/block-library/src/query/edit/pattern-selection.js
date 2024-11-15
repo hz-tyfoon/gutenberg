@@ -21,11 +21,24 @@ import {
 } from '../utils';
 import { searchPatterns } from '../../utils/search-patterns';
 
-export default function PatternSelectionModal( {
+export function PatternSelectionModal( {
 	clientId,
 	attributes,
 	setIsPatternSelectionModalOpen,
 } ) {
+	return (
+		<Modal
+			overlayClassName="block-library-query-pattern__selection-modal"
+			title={ __( 'Choose a pattern' ) }
+			onRequestClose={ () => setIsPatternSelectionModalOpen( false ) }
+			isFullScreen
+		>
+			<PatternSelection clientId={ clientId } attributes={ attributes } />
+		</Modal>
+	);
+}
+
+export default function PatternSelection( { clientId, attributes } ) {
 	const [ searchValue, setSearchValue ] = useState( '' );
 	const { replaceBlock, selectBlock } = useDispatch( blockEditorStore );
 	const onBlockPatternSelect = ( pattern, blocks ) => {
@@ -56,29 +69,23 @@ export default function PatternSelectionModal( {
 	}, [ blockPatterns, searchValue ] );
 
 	return (
-		<Modal
-			overlayClassName="block-library-query-pattern__selection-modal"
-			title={ __( 'Choose a pattern' ) }
-			onRequestClose={ () => setIsPatternSelectionModalOpen( false ) }
-			isFullScreen
-		>
-			<div className="block-library-query-pattern__selection-content">
-				<div className="block-library-query-pattern__selection-search">
-					<SearchControl
-						__nextHasNoMarginBottom
-						onChange={ setSearchValue }
-						value={ searchValue }
-						label={ __( 'Search' ) }
-						placeholder={ __( 'Search' ) }
-					/>
-				</div>
-				<BlockContextProvider value={ blockPreviewContext }>
-					<BlockPatternsList
-						blockPatterns={ filteredBlockPatterns }
-						onClickPattern={ onBlockPatternSelect }
-					/>
-				</BlockContextProvider>
+		<div className="block-library-query-pattern__selection-content">
+			<div className="block-library-query-pattern__selection-search">
+				<SearchControl
+					__nextHasNoMarginBottom
+					onChange={ setSearchValue }
+					value={ searchValue }
+					label={ __( 'Search' ) }
+					placeholder={ __( 'Search' ) }
+				/>
 			</div>
-		</Modal>
+			<BlockContextProvider value={ blockPreviewContext }>
+				<BlockPatternsList
+					blockPatterns={ filteredBlockPatterns }
+					onClickPattern={ onBlockPatternSelect }
+					showTitlesAsTooltip
+				/>
+			</BlockContextProvider>
+		</div>
 	);
 }

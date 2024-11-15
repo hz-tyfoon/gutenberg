@@ -5,7 +5,6 @@ import { useSelect, useDispatch } from '@wordpress/data';
 import { useInstanceId } from '@wordpress/compose';
 import { useEffect, useCallback } from '@wordpress/element';
 import {
-	BlockControls,
 	InspectorControls,
 	useBlockProps,
 	store as blockEditorStore,
@@ -19,7 +18,6 @@ import { store as coreStore } from '@wordpress/core-data';
  * Internal dependencies
  */
 import EnhancedPaginationControl from './inspector-controls/enhanced-pagination-control';
-import QueryToolbar from './query-toolbar';
 import QueryInspectorControls from './inspector-controls';
 import EnhancedPaginationModal from './enhanced-pagination-modal';
 import { getQueryContextFromTemplate } from '../utils';
@@ -30,10 +28,9 @@ const TEMPLATE = [ [ 'core/post-template' ] ];
 export default function QueryContent( {
 	attributes,
 	setAttributes,
-	openPatternSelectionModal,
-	name,
 	clientId,
 	context,
+	name,
 } ) {
 	const {
 		queryId,
@@ -154,6 +151,7 @@ export default function QueryContent( {
 			/>
 			<InspectorControls>
 				<QueryInspectorControls
+					name={ name }
 					attributes={ attributes }
 					setQuery={ updateQuery }
 					setDisplayLayout={ updateDisplayLayout }
@@ -162,15 +160,6 @@ export default function QueryContent( {
 					isSingular={ isSingular }
 				/>
 			</InspectorControls>
-			<BlockControls>
-				<QueryToolbar
-					name={ name }
-					clientId={ clientId }
-					attributes={ attributes }
-					setQuery={ updateQuery }
-					openPatternSelectionModal={ openPatternSelectionModal }
-				/>
-			</BlockControls>
 			<InspectorControls group="advanced">
 				<SelectControl
 					__nextHasNoMarginBottom
