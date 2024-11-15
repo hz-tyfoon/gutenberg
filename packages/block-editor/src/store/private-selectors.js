@@ -113,8 +113,7 @@ export const getEnabledClientIdsTree = createRegistrySelector( ( select ) =>
 	createSelector( getEnabledClientIdsTreeUnmemoized, ( state ) => [
 		state.blocks.order,
 		state.defaultBlockEditingMode,
-		state.sectionBlockEditingModes,
-		state.patternBlockEditingModes,
+		state.derivedBlockEditingModes,
 		state.blockEditingModes,
 		state.settings.templateLock,
 		state.blockListSettings,

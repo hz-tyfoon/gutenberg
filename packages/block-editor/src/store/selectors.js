@@ -3038,15 +3038,8 @@ export const getBlockEditingMode = createRegistrySelector(
 				clientId = '';
 			}
 
-			if (
-				! isZoomOut( state ) &&
-				state?.patternBlockEditingModes?.has( clientId )
-			) {
-				return state?.patternBlockEditingModes.get( clientId );
-			}
-
-			if ( state.sectionBlockEditingModes?.has( clientId ) ) {
-				return state.sectionBlockEditingModes.get( clientId );
+			if ( state.derivedBlockEditingModes?.has( clientId ) ) {
+				return state.derivedBlockEditingModes.get( clientId );
 			}
 
 			// In normal mode, consider that an explicitely set editing mode takes over.
