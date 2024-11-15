@@ -156,6 +156,8 @@ export function useScaleCanvas( {
 			`${ scaleContainerWidth }px`
 		);
 
+		let onZoomOutTransitionEnd = () => {};
+
 		if ( isAnimatingZoomOut ) {
 			// Unscaled height of the current iframe container.
 			const clientHeight = iframeDocument.documentElement.clientHeight;
@@ -248,30 +250,28 @@ export function useScaleCanvas( {
 				scaleValue
 			);
 
-			function onZoomOutTransitionEnd() {
-				if ( isAnimatingZoomOut ) {
-					isAnimatingRef.current = false;
-					iframeDocument.documentElement.classList.remove(
-						'zoom-out-animation'
-					);
-					setIsAnimatingZoomOut( false );
+			onZoomOutTransitionEnd = () => {
+				isAnimatingRef.current = false;
+				iframeDocument.documentElement.classList.remove(
+					'zoom-out-animation'
+				);
+				setIsAnimatingZoomOut( false );
 
-					// Update previous values.
-					prevClientHeightRef.current = clientHeight;
-					prevFrameSizeRef.current = frameSize;
-					prevScaleRef.current = scale;
+				// Update previous values.
+				prevClientHeightRef.current = clientHeight;
+				prevFrameSizeRef.current = frameSize;
+				prevScaleRef.current = scale;
 
-					// Set the final scroll position that was just animated to.
-					iframeDocument.documentElement.scrollTop = scrollTopNext;
+				// Set the final scroll position that was just animated to.
+				iframeDocument.documentElement.scrollTop = scrollTopNext;
 
-					iframeDocument.documentElement.style.removeProperty(
-						'--wp-block-editor-iframe-zoom-out-scroll-top'
-					);
-					iframeDocument.documentElement.style.removeProperty(
-						'--wp-block-editor-iframe-zoom-out-scroll-top-next'
-					);
-				}
-			}
+				iframeDocument.documentElement.style.removeProperty(
+					'--wp-block-editor-iframe-zoom-out-scroll-top'
+				);
+				iframeDocument.documentElement.style.removeProperty(
+					'--wp-block-editor-iframe-zoom-out-scroll-top-next'
+				);
+			};
 
 			if ( prefersReducedMotion ) {
 				onZoomOutTransitionEnd();
@@ -285,26 +285,29 @@ export function useScaleCanvas( {
 		}
 
 		return () => {
-			// HACK: Skipping cleanup because it causes issues with the zoom out
-			// animation. More refactoring is needed to fix this properly.
-			// iframeDocument.documentElement.style.removeProperty(
-			// 	'--wp-block-editor-iframe-zoom-out-scale'
-			// );
-			// iframeDocument.documentElement.style.removeProperty(
-			// 	'--wp-block-editor-iframe-zoom-out-frame-size'
-			// );
-			// iframeDocument.documentElement.style.removeProperty(
-			// 	'--wp-block-editor-iframe-zoom-out-content-height'
-			// );
-			// iframeDocument.documentElement.style.removeProperty(
-			// 	'--wp-block-editor-iframe-zoom-out-inner-height'
-			// );
-			// iframeDocument.documentElement.style.removeProperty(
-			// 	'--wp-block-editor-iframe-zoom-out-container-width'
-			// );
-			// iframeDocument.documentElement.style.removeProperty(
-			// 	'--wp-block-editor-iframe-zoom-out-scale-container-width'
-			// );
+			iframeDocument.documentElement.style.removeProperty(
+				'--wp-block-editor-iframe-zoom-out-scale'
+			);
+			iframeDocument.documentElement.style.removeProperty(
+				'--wp-block-editor-iframe-zoom-out-frame-size'
+			);
+			iframeDocument.documentElement.style.removeProperty(
+				'--wp-block-editor-iframe-zoom-out-content-height'
+			);
+			iframeDocument.documentElement.style.removeProperty(
+				'--wp-block-editor-iframe-zoom-out-inner-height'
+			);
+			iframeDocument.documentElement.style.removeProperty(
+				'--wp-block-editor-iframe-zoom-out-container-width'
+			);
+			iframeDocument.documentElement.style.removeProperty(
+				'--wp-block-editor-iframe-zoom-out-scale-container-width'
+			);
+
+			iframeDocument.documentElement.removeEventListener(
+				'transitionend',
+				onZoomOutTransitionEnd
+			);
 		};
 	}, [
 		isAnimatingZoomOut,
