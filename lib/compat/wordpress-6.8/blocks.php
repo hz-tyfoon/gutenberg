@@ -35,9 +35,19 @@ function gutenberg_stabilize_experimental_block_supports( $args ) {
 			'__experimentalTextTransform'  => 'textTransform',
 		),
 	);
+	$done                            = array();
 
 	$updated_supports = array();
 	foreach ( $args['supports'] as $support => $config ) {
+		/*
+		 * If this support config has already been stabilized, skip it.
+		 * A stable support key occurring after an experimental key, gets
+		 * stabilized then so that the two configs can be merged effectively.
+		 */
+		if ( isset( $done[ $support ] ) ) {
+			continue;
+		}
+
 		$stable_support_key = $experimental_supports_map[ $support ] ?? $support;
 
 		/*
@@ -104,12 +114,12 @@ function gutenberg_stabilize_experimental_block_supports( $args ) {
 				 * stabilized before merging to keep stabilized and experimental flags in
 				 * sync.
 				 */
-				// TODO: This could be added to a "done list", to skip in the overall loop through `$args['supports']`.
 				$args['supports'][ $stable_support_key ] = $stabilize_config( $args['supports'][ $stable_support_key ], $stable_support_key );
-
-				$stable_config = $experimental_first
+				$stable_config                           = $experimental_first
 					? array_merge( $stable_config, $args['supports'][ $stable_support_key ] )
 					: array_merge( $args['supports'][ $stable_support_key ], $stable_config );
+				// Prevents reprocessing this support as it was merged above.
+				$done[ $stable_support_key ] = true;
 			} else {
 				$stable_config = $experimental_first
 					? $args['supports'][ $stable_support_key ]
