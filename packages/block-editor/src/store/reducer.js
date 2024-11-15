@@ -2162,9 +2162,8 @@ function hasParentWithName( state, clientId, name ) {
 	return false;
 }
 
-function isSyncedPatternOverrideBlock( state, block ) {
+function hasBindings( block ) {
 	return (
-		hasParentWithName( state, block.clientId, 'core/block' ) &&
 		block?.attributes?.metadata?.bindings &&
 		Object.keys( block?.attributes?.metadata?.bindings ).length
 	);
@@ -2338,112 +2337,103 @@ const withDerivedBlockEditingModes = ( reducer ) => ( state, action ) => {
 				const sectionClientIds =
 					nextState.blocks.order.get( sectionRootClientId );
 
-				if ( sectionClientIds?.length ) {
-					for ( const sectionClientId of sectionClientIds ) {
-						derivedBlockEditingModes.set(
-							sectionClientId,
-							'contentOnly'
-						);
+				if ( ! sectionClientIds?.length ) {
+					return {
+						...nextState,
+						defaultBlockEditingMode,
+						derivedBlockEditingModes,
+					};
+				}
+				for ( const sectionClientId of sectionClientIds ) {
+					derivedBlockEditingModes.set(
+						sectionClientId,
+						'contentOnly'
+					);
 
-						// Content is only editable in navigation mode.
-						if ( isNavMode ) {
-							const sectionTree =
-								nextState.blocks.tree.get(
-									`controlled||${ sectionClientId }`
-								) ??
-								nextState.blocks.tree.get( sectionClientId );
+					// Content is only editable in navigation mode.
+					if ( isNavMode ) {
+						const sectionTree =
+							nextState.blocks.tree.get(
+								`controlled||${ sectionClientId }`
+							) ?? nextState.blocks.tree.get( sectionClientId );
 
-							recurseBlocks(
-								sectionTree?.innerBlocks,
-								( block ) => {
-									if (
-										isContentBlock( block.name ) ||
-										isSyncedPatternOverrideBlock(
-											nextState,
-											block
-										)
-									) {
-										derivedBlockEditingModes.set(
-											block.clientId,
-											'contentOnly'
-										);
-									}
-								}
+						recurseBlocks( sectionTree?.innerBlocks, ( block ) => {
+							const isInSyncedPattern = hasParentWithName(
+								nextState,
+								block.clientId,
+								'core/block'
 							);
-						}
+							if ( isInSyncedPattern ) {
+								if ( hasBindings( block ) ) {
+									derivedBlockEditingModes.set(
+										block.clientId,
+										'contentOnly'
+									);
+								}
+							} else if ( isContentBlock( block.name ) ) {
+								derivedBlockEditingModes.set(
+									block.clientId,
+									'contentOnly'
+								);
+							}
+						} );
 					}
 				}
 			} else {
 				defaultBlockEditingMode = 'default';
 
+				if ( ! nextState.syncedPatternClientIds?.size ) {
+					return {
+						...nextState,
+						defaultBlockEditingMode,
+						derivedBlockEditingModes,
+					};
+				}
+
 				// Outside of zoomed out or navigation mode, synced patterns also have
 				// their own block editing modes. Inner content is disabled unless it has
 				// a block binding, in which case it is set to contentOnly.
 				// Patterns nested within other patterns are set to disabled.
-				if ( nextState.syncedPatternClientIds?.size ) {
-					for ( const clientId of nextState.syncedPatternClientIds ) {
-						// The pattern block is a controlled block, so the inner blocks are stored
-						// under a special key in the tree.
-						// Fallback to the normal key if the special key doesn't exist, as it will
-						// still allow adding the editing mode of the pattern block itself.
-						const patternTree =
-							nextState.blocks.tree.get(
-								`controlled||${ clientId }`
-							) ?? nextState.blocks.tree.get( clientId );
+				for ( const clientId of nextState.syncedPatternClientIds ) {
+					// The pattern block is a controlled block, so the inner blocks are stored
+					// under a special key in the tree.
+					// Fallback to the normal key if the special key doesn't exist, as it will
+					// still allow adding the editing mode of the pattern block itself.
+					const patternTree =
+						nextState.blocks.tree.get(
+							`controlled||${ clientId }`
+						) ?? nextState.blocks.tree.get( clientId );
 
-						if (
-							hasParentWithName(
-								nextState,
-								clientId,
-								'core/block'
-							)
-						) {
-							// This is a nested pattern block, it should be set to disabled,
-							// along with all its child blocks.
+					if (
+						hasParentWithName( nextState, clientId, 'core/block' )
+					) {
+						// This is a nested pattern block, it should be set to disabled,
+						// along with all its child blocks.
+						derivedBlockEditingModes.set( clientId, 'disabled' );
+						recurseBlocks( patternTree?.innerBlocks, ( block ) => {
 							derivedBlockEditingModes.set(
-								clientId,
+								block.clientId,
 								'disabled'
 							);
-							recurseBlocks(
-								patternTree?.innerBlocks,
-								( block ) => {
-									derivedBlockEditingModes.set(
-										block.clientId,
-										'disabled'
-									);
-								}
-							);
-						} else {
-							// Set the parent pattern block to contentOnly.
-							derivedBlockEditingModes.set(
-								clientId,
-								'contentOnly'
-							);
-							recurseBlocks(
-								patternTree?.innerBlocks,
-								( block ) => {
-									// If an inner block has bindings, it should be set to contentOnly.
-									// Else it should be set to disabled.
-									if (
-										block?.attributes?.metadata?.bindings &&
-										Object.keys(
-											block?.attributes?.metadata
-												?.bindings
-										).length
-									) {
-										derivedBlockEditingModes.set(
-											block.clientId,
-											'contentOnly'
-										);
-									} else {
-										derivedBlockEditingModes.set(
-											block.clientId,
-											'disabled'
-										);
-									}
-								}
-							);
-						}
+						} );
+					} else {
+						// Set the parent pattern block to contentOnly.
+						derivedBlockEditingModes.set( clientId, 'contentOnly' );
+						recurseBlocks( patternTree?.innerBlocks, ( block ) => {
+							// If an inner block has bindings, it should be set to contentOnly.
+							// Else it should be set to disabled.
+							if ( hasBindings( block ) ) {
+								derivedBlockEditingModes.set(
+									block.clientId,
+									'contentOnly'
+								);
+							} else {
+								derivedBlockEditingModes.set(
+									block.clientId,
+									'disabled'
+								);
+							}
+						} );
 					}
 				}
 			}
