@@ -3,7 +3,7 @@
 }
 
 .block-editor-iframe__html {
-	$frame-size: var(--wp-block-editor-iframe-zoom-out-frame-size);
+	$frame-size: var(--wp-block-editor-iframe-zoom-out-frame-size, 0);
 	$scale: var(--wp-block-editor-iframe-zoom-out-scale, 1);
 	scale: $scale;
 	transform-origin: top center;
