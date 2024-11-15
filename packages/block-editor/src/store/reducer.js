@@ -2105,93 +2105,6 @@ export function insertionPoint( state = null, action ) {
 	return state;
 }
 
-/**
- * Reducer that stores synced pattern client IDs.
- *
- * @param {boolean} state  Current state.
- * @param {Object}  action Dispatched action.
- *
- * @return {Object} Updated state.
- */
-export function syncedPatternClientIds( state = null, action ) {
-	switch ( action.type ) {
-		case 'RESET_BLOCKS': {
-			const patternClientIds = new Set();
-			recurseBlocks( action.blocks, ( block ) => {
-				if ( block.name === 'core/block' ) {
-					patternClientIds.add( block.clientId );
-				}
-			} );
-
-			return patternClientIds;
-		}
-		case 'INSERT_BLOCKS': {
-			const patternClientIds = new Set( state.syncedPatternClientIds );
-			recurseBlocks( action.blocks, ( block ) => {
-				if ( block.name === 'core/block' ) {
-					patternClientIds.add( block.clientId );
-				}
-			} );
-			return patternClientIds;
-		}
-		case 'REMOVE_BLOCKS': {
-			const patternClientIds = new Set( state.syncedPatternClientIds );
-			for ( const removedClientId of action.clientIds ) {
-				const removedTree =
-					state.blocks.tree.get(
-						`controlled||${ removedClientId }`
-					) ?? state.blocks.tree.get( removedClientId );
-				if ( removedTree ) {
-					recurseBlocks( [ removedTree ], ( block ) => {
-						patternClientIds.delete( block.clientId );
-					} );
-				}
-			}
-			return patternClientIds;
-		}
-		case 'REPLACE_INNER_BLOCKS': {
-			const patternClientIds = new Set( state.syncedPatternClientIds );
-			const rootTree =
-				state.blocks.tree.get(
-					`controlled||${ action.rootClientId }`
-				) ?? state.blocks.tree.get( action.rootClientId );
-
-			if ( rootTree ) {
-				recurseBlocks( rootTree?.innerBlocks, ( block ) => {
-					patternClientIds.delete( block.clientId );
-				} );
-			}
-			recurseBlocks( action.blocks, ( block ) => {
-				if ( block.name === 'core/block' ) {
-					patternClientIds.add( block.clientId );
-				}
-			} );
-			return syncedPatternClientIds;
-		}
-		case 'REPLACE_BLOCKS': {
-			const patternClientIds = new Set( state.syncedPatternClientIds );
-			for ( const removedClientId of action.clientIds ) {
-				const removedTree =
-					state.blocks.tree.get(
-						`controlled||${ removedClientId }`
-					) ?? state.blocks.tree.get( removedClientId );
-				if ( removedTree ) {
-					recurseBlocks( [ removedTree ], ( block ) => {
-						patternClientIds.delete( block.clientId );
-					} );
-				}
-			}
-			recurseBlocks( action.blocks, ( block ) => {
-				if ( block.name === 'core/block' ) {
-					patternClientIds.add( block.clientId );
-				}
-			} );
-			return patternClientIds;
-		}
-	}
-	return state;
-}
-
 const combinedReducers = combineReducers( {
 	blocks,
 	isDragging,
@@ -2225,7 +2138,6 @@ const combinedReducers = combineReducers( {
 	registeredInserterMediaCategories,
 	hoveredBlockClientId,
 	zoomLevel,
-	syncedPatternClientIds,
 } );
 
 function recurseBlocks( _blocks, callback ) {
@@ -2263,8 +2175,7 @@ function isWithinSection( state, clientId ) {
 	return false;
 }
 
-function getPatternBlockEditingModes( state ) {
-	const patternClientIds = state.syncedPatternClientIds;
+function getPatternBlockEditingModes( state, patternClientIds ) {
 	if ( ! patternClientIds?.size ) {
 		return new Map();
 	}
@@ -2318,21 +2229,132 @@ const withPatternBlockEditingModes = ( reducer ) => {
 		}
 
 		switch ( action.type ) {
-			case 'RESET_BLOCKS':
-			case 'REMOVE_BLOCKS':
-			case 'REPLACE_INNER_BLOCKS':
-			case 'REPLACE_BLOCKS':
-			case 'INSERT_BLOCKS': {
+			case 'RESET_BLOCKS': {
+				const patternClientIds = new Set();
+				recurseBlocks( action.blocks, ( block ) => {
+					if ( block.name === 'core/block' ) {
+						patternClientIds.add( block.clientId );
+					}
+				} );
+
 				return {
 					...nextState,
-					patternBlockEditingModes:
-						getPatternBlockEditingModes( nextState ),
+					patternBlockEditingModes: getPatternBlockEditingModes(
+						nextState,
+						patternClientIds
+					),
+					patternClientIds,
+				};
+			}
+			case 'INSERT_BLOCKS': {
+				const patternClientIds = state.patternClientIds
+					? new Set( state.patternClientIds )
+					: new Set();
+				recurseBlocks( action.blocks, ( block ) => {
+					if ( block.name === 'core/block' ) {
+						patternClientIds.add( block.clientId );
+					}
+				} );
+
+				return {
+					...nextState,
+					patternBlockEditingModes: getPatternBlockEditingModes(
+						nextState,
+						patternClientIds
+					),
+					patternClientIds,
+				};
+			}
+			case 'REMOVE_BLOCKS': {
+				const patternClientIds = state.patternClientIds
+					? new Set( state.patternClientIds )
+					: new Set();
+				for ( const removedClientId of action.clientIds ) {
+					const removedTree =
+						state.blocks.tree.get(
+							`controlled||${ removedClientId }`
+						) ?? state.blocks.tree.get( removedClientId );
+					if ( removedTree ) {
+						recurseBlocks( [ removedTree ], ( block ) => {
+							patternClientIds.delete( block.clientId );
+						} );
+					}
+				}
+
+				return {
+					...nextState,
+					patternBlockEditingModes: getPatternBlockEditingModes(
+						nextState,
+						patternClientIds
+					),
+					patternClientIds,
+				};
+			}
+			case 'REPLACE_INNER_BLOCKS': {
+				const patternClientIds = state.patternClientIds
+					? new Set( state.patternClientIds )
+					: new Set();
+
+				const rootTree =
+					state.blocks.tree.get(
+						`controlled||${ action.rootClientId }`
+					) ?? state.blocks.tree.get( action.rootClientId );
+
+				if ( rootTree ) {
+					recurseBlocks( rootTree?.innerBlocks, ( block ) => {
+						patternClientIds.delete( block.clientId );
+					} );
+				}
+				recurseBlocks( action.blocks, ( block ) => {
+					if ( block.name === 'core/block' ) {
+						patternClientIds.add( block.clientId );
+					}
+				} );
+
+				return {
+					...nextState,
+					patternBlockEditingModes: getPatternBlockEditingModes(
+						nextState,
+						patternClientIds
+					),
+					patternClientIds,
+				};
+			}
+			case 'REPLACE_BLOCKS': {
+				const patternClientIds = state.patternClientIds
+					? new Set( state.patternClientIds )
+					: new Set();
+				for ( const removedClientId of action.clientIds ) {
+					const removedTree =
+						state.blocks.tree.get(
+							`controlled||${ removedClientId }`
+						) ?? state.blocks.tree.get( removedClientId );
+					if ( removedTree ) {
+						recurseBlocks( [ removedTree ], ( block ) => {
+							patternClientIds.delete( block.clientId );
+						} );
+					}
+				}
+				recurseBlocks( action.blocks, ( block ) => {
+					if ( block.name === 'core/block' ) {
+						patternClientIds.add( block.clientId );
+					}
+				} );
+
+				return {
+					...nextState,
+					patternBlockEditingModes: getPatternBlockEditingModes(
+						nextState,
+						patternClientIds
+					),
+					patternClientIds,
 				};
 			}
 		}
 
-		// If there's no change, the patternBlockEditingModes from the previous
-		// state need to be preserved.
+		// If there's no change, the patternClientIds and patternBlockEditingModes
+		// from the previous state need to be preserved.
+		nextState.patternClientIds = state?.patternClientIds ?? new Set();
 		nextState.patternBlockEditingModes =
 			state?.patternBlockEditingModes ?? new Map();
 
