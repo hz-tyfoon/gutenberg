@@ -2181,27 +2181,27 @@ const withSyncedPatternClientIds = ( reducer ) => ( state, action ) => {
 		case 'RESET_BLOCKS':
 		case 'INSERT_BLOCKS': {
 			let wasModified = false;
-			const patternClientIds = state.patternClientIds
-				? new Set( state.patternClientIds )
+			const syncedPatternClientIds = state.syncedPatternClientIds
+				? new Set( state.syncedPatternClientIds )
 				: new Set();
 			recurseBlocks( action.blocks, ( block ) => {
 				if ( block.name === 'core/block' ) {
 					wasModified = true;
-					patternClientIds.add( block.clientId );
+					syncedPatternClientIds.add( block.clientId );
 				}
 			} );
 			if ( wasModified ) {
 				return {
 					...nextState,
-					patternClientIds,
+					syncedPatternClientIds,
 				};
 			}
-			return nextState;
+			break;
 		}
 		case 'REMOVE_BLOCKS': {
 			let wasModified = false;
-			const patternClientIds = state.patternClientIds
-				? new Set( state.patternClientIds )
+			const syncedPatternClientIds = state.syncedPatternClientIds
+				? new Set( state.syncedPatternClientIds )
 				: new Set();
 			for ( const removedClientId of action.clientIds ) {
 				const removedTree =
@@ -2211,22 +2211,22 @@ const withSyncedPatternClientIds = ( reducer ) => ( state, action ) => {
 				if ( removedTree ) {
 					recurseBlocks( [ removedTree ], ( block ) => {
 						wasModified = true;
-						patternClientIds.delete( block.clientId );
+						syncedPatternClientIds.delete( block.clientId );
 					} );
 				}
 			}
 			if ( wasModified ) {
 				return {
 					...nextState,
-					patternClientIds,
+					syncedPatternClientIds,
 				};
 			}
-			return nextState;
+			break;
 		}
 		case 'REPLACE_INNER_BLOCKS': {
 			let wasModified = false;
-			const patternClientIds = state.patternClientIds
-				? new Set( state.patternClientIds )
+			const syncedPatternClientIds = state.syncedPatternClientIds
+				? new Set( state.syncedPatternClientIds )
 				: new Set();
 			const rootTree =
 				state.blocks.tree.get(
@@ -2236,27 +2236,27 @@ const withSyncedPatternClientIds = ( reducer ) => ( state, action ) => {
 			if ( rootTree ) {
 				recurseBlocks( rootTree?.innerBlocks, ( block ) => {
 					wasModified = true;
-					patternClientIds.delete( block.clientId );
+					syncedPatternClientIds.delete( block.clientId );
 				} );
 			}
 			recurseBlocks( action.blocks, ( block ) => {
 				if ( block.name === 'core/block' ) {
 					wasModified = true;
-					patternClientIds.add( block.clientId );
+					syncedPatternClientIds.add( block.clientId );
 				}
 			} );
 			if ( wasModified ) {
 				return {
 					...nextState,
-					patternClientIds,
+					syncedPatternClientIds,
 				};
 			}
-			return nextState;
+			break;
 		}
 		case 'REPLACE_BLOCKS': {
 			let wasModified = false;
-			const patternClientIds = state.patternClientIds
-				? new Set( state.patternClientIds )
+			const syncedPatternClientIds = state.syncedPatternClientIds
+				? new Set( state.syncedPatternClientIds )
 				: new Set();
 			for ( const removedClientId of action.clientIds ) {
 				const removedTree =
@@ -2266,28 +2266,29 @@ const withSyncedPatternClientIds = ( reducer ) => ( state, action ) => {
 				if ( removedTree ) {
 					recurseBlocks( [ removedTree ], ( block ) => {
 						wasModified = true;
-						patternClientIds.delete( block.clientId );
+						syncedPatternClientIds.delete( block.clientId );
 					} );
 				}
 			}
 			recurseBlocks( action.blocks, ( block ) => {
 				if ( block.name === 'core/block' ) {
 					wasModified = true;
-					patternClientIds.add( block.clientId );
+					syncedPatternClientIds.add( block.clientId );
 				}
 			} );
 			if ( wasModified ) {
 				return {
 					...nextState,
-					patternClientIds,
+					syncedPatternClientIds,
 				};
 			}
-			return nextState;
+			break;
 		}
 	}
 
-	// Preserve the previous patternClientIds if there's no state change.
-	nextState.patternClientIds = state?.patternClientIds ?? new Set();
+	// Preserve the previous syncedPatternClientIds if there's no state change.
+	nextState.syncedPatternClientIds =
+		state?.syncedPatternClientIds ?? new Set();
 	return nextState;
 };
 
@@ -2337,32 +2338,39 @@ const withDerivedBlockEditingModes = ( reducer ) => ( state, action ) => {
 				const sectionClientIds =
 					nextState.blocks.order.get( sectionRootClientId );
 
-				if ( ! sectionClientIds?.length ) {
-					return derivedBlockEditingModes;
-				}
+				if ( sectionClientIds?.length ) {
+					for ( const sectionClientId of sectionClientIds ) {
+						derivedBlockEditingModes.set(
+							sectionClientId,
+							'contentOnly'
+						);
 
-				for ( const sectionClientId of sectionClientIds ) {
-					derivedBlockEditingModes.set(
-						sectionClientId,
-						'contentOnly'
-					);
+						// Content is only editable in navigation mode.
+						if ( isNavMode ) {
+							const sectionTree =
+								nextState.blocks.tree.get(
+									`controlled||${ sectionClientId }`
+								) ??
+								nextState.blocks.tree.get( sectionClientId );
 
-					// Content is only editable in navigation mode.
-					if ( isNavMode ) {
-						const sectionTree =
-							nextState.blocks.tree.get( sectionClientId );
-
-						recurseBlocks( sectionTree?.innerBlocks, ( block ) => {
-							if (
-								isContentBlock( block.name ) ||
-								isSyncedPatternOverrideBlock( nextState, block )
-							) {
-								derivedBlockEditingModes.set(
-									block.clientId,
-									'contentOnly'
-								);
-							}
-						} );
+							recurseBlocks(
+								sectionTree?.innerBlocks,
+								( block ) => {
+									if (
+										isContentBlock( block.name ) ||
+										isSyncedPatternOverrideBlock(
+											nextState,
+											block
+										)
+									) {
+										derivedBlockEditingModes.set(
+											block.clientId,
+											'contentOnly'
+										);
+									}
+								}
+							);
+						}
 					}
 				}
 			} else {
@@ -2372,48 +2380,70 @@ const withDerivedBlockEditingModes = ( reducer ) => ( state, action ) => {
 				// their own block editing modes. Inner content is disabled unless it has
 				// a block binding, in which case it is set to contentOnly.
 				// Patterns nested within other patterns are set to disabled.
-				for ( const clientId of nextState.syncedPatternClientIds ) {
-					// The pattern block is a controlled block, so the inner blocks are stored
-					// under a special key in the tree.
-					// Fallback to the normal key if the special key doesn't exist, as it will
-					// still allow adding the editing mode of the pattern block itself.
-					const patternTree =
-						state.blocks.tree.get( `controlled||${ clientId }` ) ??
-						state.blocks.tree.get( clientId );
+				if ( nextState.syncedPatternClientIds?.size ) {
+					for ( const clientId of nextState.syncedPatternClientIds ) {
+						// The pattern block is a controlled block, so the inner blocks are stored
+						// under a special key in the tree.
+						// Fallback to the normal key if the special key doesn't exist, as it will
+						// still allow adding the editing mode of the pattern block itself.
+						const patternTree =
+							nextState.blocks.tree.get(
+								`controlled||${ clientId }`
+							) ?? nextState.blocks.tree.get( clientId );
 
-					if ( hasParentWithName( state, clientId, 'core/block' ) ) {
-						// This is a nested pattern block, it should be set to disabled,
-						// along with all its child blocks.
-						derivedBlockEditingModes.set( clientId, 'disabled' );
-						recurseBlocks( patternTree?.innerBlocks, ( block ) => {
+						if (
+							hasParentWithName(
+								nextState,
+								clientId,
+								'core/block'
+							)
+						) {
+							// This is a nested pattern block, it should be set to disabled,
+							// along with all its child blocks.
 							derivedBlockEditingModes.set(
-								block.clientId,
+								clientId,
 								'disabled'
 							);
-						} );
-					} else {
-						// Set the parent pattern block to contentOnly.
-						derivedBlockEditingModes.set( clientId, 'contentOnly' );
-						recurseBlocks( patternTree?.innerBlocks, ( block ) => {
-							// If an inner block has bindings, it should be set to contentOnly.
-							// Else it should be set to disabled.
-							if (
-								block?.attributes?.metadata?.bindings &&
-								Object.keys(
-									block?.attributes?.metadata?.bindings
-								).length
-							) {
-								derivedBlockEditingModes.set(
-									block.clientId,
-									'contentOnly'
-								);
-							} else {
-								derivedBlockEditingModes.set(
-									block.clientId,
-									'disabled'
-								);
-							}
-						} );
+							recurseBlocks(
+								patternTree?.innerBlocks,
+								( block ) => {
+									derivedBlockEditingModes.set(
+										block.clientId,
+										'disabled'
+									);
+								}
+							);
+						} else {
+							// Set the parent pattern block to contentOnly.
+							derivedBlockEditingModes.set(
+								clientId,
+								'contentOnly'
+							);
+							recurseBlocks(
+								patternTree?.innerBlocks,
+								( block ) => {
+									// If an inner block has bindings, it should be set to contentOnly.
+									// Else it should be set to disabled.
+									if (
+										block?.attributes?.metadata?.bindings &&
+										Object.keys(
+											block?.attributes?.metadata
+												?.bindings
+										).length
+									) {
+										derivedBlockEditingModes.set(
+											block.clientId,
+											'contentOnly'
+										);
+									} else {
+										derivedBlockEditingModes.set(
+											block.clientId,
+											'disabled'
+										);
+									}
+								}
+							);
+						}
 					}
 				}
 			}
@@ -2426,7 +2456,7 @@ const withDerivedBlockEditingModes = ( reducer ) => ( state, action ) => {
 		}
 	}
 
-	// If there's no change, the patternClientIds and patternBlockEditingModes
+	// If there's no change, the syncedPatternClientIds and patternBlockEditingModes
 	// from the previous state need to be preserved.
 	nextState.defaultBlockEditingMode =
 		state?.defaultBlockEditingMode ?? 'default';
