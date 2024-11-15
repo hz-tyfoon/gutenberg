@@ -212,6 +212,7 @@ export default function QueryInspectorControls( props ) {
 					<PatternSelection
 						attributes={ attributes }
 						clientId={ clientId }
+						showTitlesAsTooltip
 					/>
 				</PanelBody>
 			) }

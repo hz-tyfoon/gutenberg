@@ -38,7 +38,11 @@ export function PatternSelectionModal( {
 	);
 }
 
-export default function PatternSelection( { clientId, attributes } ) {
+export default function PatternSelection( {
+	clientId,
+	attributes,
+	showTitlesAsTooltip = false,
+} ) {
 	const [ searchValue, setSearchValue ] = useState( '' );
 	const { replaceBlock, selectBlock } = useDispatch( blockEditorStore );
 	const onBlockPatternSelect = ( pattern, blocks ) => {
@@ -83,7 +87,7 @@ export default function PatternSelection( { clientId, attributes } ) {
 				<BlockPatternsList
 					blockPatterns={ filteredBlockPatterns }
 					onClickPattern={ onBlockPatternSelect }
-					showTitlesAsTooltip
+					showTitlesAsTooltip={ showTitlesAsTooltip }
 				/>
 			</BlockContextProvider>
 		</div>
