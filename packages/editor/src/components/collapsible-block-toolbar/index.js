@@ -11,7 +11,7 @@ import {
 	store as blockEditorStore,
 	privateApis as blockEditorPrivateApis,
 } from '@wordpress/block-editor';
-import { useState } from '@wordpress/element';
+import { useEffect, useState } from '@wordpress/element';
 import { Button, Popover } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { next, previous } from '@wordpress/icons';
@@ -35,6 +35,13 @@ export default function CollapsibleBlockToolbar() {
 	const [ isCollapsed, setIsCollapsed ] = useState( false );
 
 	const hasBlockSelection = !! blockSelectionStart;
+
+	useEffect( () => {
+		// If we have a new block selection, show the block tools
+		if ( blockSelectionStart ) {
+			setIsCollapsed( false );
+		}
+	}, [ blockSelectionStart ] );
 
 	if ( ! hasBlockToolbar ) {
 		return null;
