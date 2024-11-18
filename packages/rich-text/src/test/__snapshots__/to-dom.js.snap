@@ -280,7 +280,7 @@ exports[`recordToDom should preserve comments 1`] = `
     data-rich-text-comment="comment"
   >
     <span>
-      [comment]
+      comment
     </span>
   </span>
   
@@ -312,7 +312,7 @@ exports[`recordToDom should preserve funky comments 1`] = `
     data-rich-text-comment="/funky"
   >
     <span>
-      [/funky]
+      /funky
     </span>
   </span>
   
