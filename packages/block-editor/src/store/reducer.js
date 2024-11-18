@@ -2312,6 +2312,7 @@ const withDerivedBlockEditingModes = ( reducer ) => ( state, action ) => {
 		case 'INSERT_BLOCKS':
 		case 'RECEIVE_BLOCKS':
 		case 'REPLACE_BLOCKS':
+		case 'REPLACE_INNER_BLOCKS':
 		case 'REMOVE_BLOCKS':
 		case 'MOVE_BLOCKS_TO_POSITION':
 		case 'UPDATE_SETTINGS':
