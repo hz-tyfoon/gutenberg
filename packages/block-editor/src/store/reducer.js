@@ -2140,6 +2140,15 @@ const combinedReducers = combineReducers( {
 	zoomLevel,
 } );
 
+/**
+ * Retrieves a block's tree structure, handling both controlled and uncontrolled inner blocks.
+ *
+ * @param {Object} state    The current state object.
+ * @param {string} clientId The client ID of the block to retrieve.
+ *
+ * @return {Object|undefined} The block tree object, or undefined if not found. For controlled blocks,
+ *                           returns a merged tree with controlled inner blocks.
+ */
 function getBlockTreeBlock( state, clientId ) {
 	if ( ! state.blocks.controlledInnerBlocks[ clientId ] ) {
 		return state.blocks.tree.get( clientId );
@@ -2154,6 +2163,14 @@ function getBlockTreeBlock( state, clientId ) {
 	};
 }
 
+/**
+ * Recursively traverses through inner blocks of a given block and executes a callback for each block.
+ *
+ * @param {Object}   state    The store state.
+ * @param {string}   clientId The clientId of the block to start traversing from.
+ * @param {Function} callback Function to execute for each block encountered during traversal.
+ *                            The callback receives the current block as its argument.
+ */
 function recurseInnerBlocks( state, clientId, callback ) {
 	const parentTree = getBlockTreeBlock( state, clientId );
 	if ( ! parentTree?.innerBlocks?.length ) {
@@ -2166,6 +2183,15 @@ function recurseInnerBlocks( state, clientId, callback ) {
 	}
 }
 
+/**
+ * Checks if a block has a parent block with a specific name by traversing up the block hierarchy.
+ *
+ * @param {Object} state    The current state object.
+ * @param {string} clientId The client ID of the block to check.
+ * @param {string} name     The block name to search for in parent blocks.
+ *
+ * @return {boolean} True if a parent block with the specified name is found, false otherwise.
+ */
 function hasParentWithName( state, clientId, name ) {
 	let parent = state.blocks.parents.get( clientId );
 	while ( parent ) {
@@ -2177,6 +2203,12 @@ function hasParentWithName( state, clientId, name ) {
 	return false;
 }
 
+/**
+ * Checks if a block has any bindings in its metadata attributes.
+ *
+ * @param {Object} block The block object to check for bindings.
+ * @return {boolean}    True if the block has bindings, false otherwise.
+ */
 function hasBindings( block ) {
 	return (
 		block?.attributes?.metadata?.bindings &&
@@ -2184,6 +2216,18 @@ function hasBindings( block ) {
 	);
 }
 
+/**
+ * Higher-order reducer that adds derived block editing modes to the state.
+ *
+ * This reducer enhances the state with information about block editing modes,
+ * computing `defaultBlockEditingMode` and `derivedBlockEditingModes` based on
+ * factors like zoom level, navigation mode, and block types. It handles synced
+ * patterns by setting specific editing modes for 'core/block' blocks and their
+ * inner blocks, with different treatments for nested and top-level patterns.
+ *
+ * @param {Function} reducer The reducer to wrap.
+ * @return {Function} An enhanced reducer that includes derived block editing modes.
+ */
 const withDerivedBlockEditingModes = ( reducer ) => ( state, action ) => {
 	const nextState = reducer( state, action );
 
@@ -2299,12 +2343,10 @@ const withDerivedBlockEditingModes = ( reducer ) => ( state, action ) => {
 					// If not in zoomed out or navigation mode, set the parent pattern
 					// block to contentOnly.
 					// If we are in zoomed out or navigation mode, the pattern block
-					// will be set to contentOnly if it's a section.
+					// will already have been set to contentOnly when it's a section.
 					if ( ! isZoomedOut && ! isNavMode ) {
 						derivedBlockEditingModes.set( clientId, 'contentOnly' );
 					}
-					// Zoomed out doesn't allow content editing, so don't try enabling
-					// inner blocks.
 					recurseInnerBlocks( nextState, clientId, ( block ) => {
 						// If an inner block has bindings, it should be set to contentOnly.
 						// Else it should be set to disabled.
