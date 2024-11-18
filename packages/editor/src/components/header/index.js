@@ -6,7 +6,6 @@ import { useSelect } from '@wordpress/data';
 import { useMediaQuery, useViewportMatch } from '@wordpress/compose';
 import { __unstableMotion as motion } from '@wordpress/components';
 import { store as preferencesStore } from '@wordpress/preferences';
-import { useState } from '@wordpress/element';
 import { PinnedItems } from '@wordpress/interface';
 
 /**
@@ -63,7 +62,6 @@ function Header( {
 		isPublishSidebarOpened,
 		showIconLabels,
 		hasFixedToolbar,
-		hasBlockSelection,
 	} = useSelect( ( select ) => {
 		const { get: getPreference } = select( preferencesStore );
 		const {
@@ -93,12 +91,6 @@ function Header( {
 		PATTERN_POST_TYPE,
 	].includes( postType );
 
-	const [ isBlockToolsCollapsed, setIsBlockToolsCollapsed ] =
-		useState( true );
-
-	const hasCenter =
-		( ! hasBlockSelection || isBlockToolsCollapsed ) &&
-		! isTooNarrowForDocumentBar;
 	const hasBackButton = useHasBackButton();
 	/*
 	 * The edit-post-header classname is only kept for backward compatability
@@ -124,13 +116,10 @@ function Header( {
 					disableBlockTools={ forceDisableBlockTools || isTextEditor }
 				/>
 				{ hasFixedToolbar && isLargeViewport && (
-					<CollapsibleBlockToolbar
-						isCollapsed={ isBlockToolsCollapsed }
-						onToggle={ setIsBlockToolsCollapsed }
-					/>
+					<CollapsibleBlockToolbar />
 				) }
 			</motion.div>
-			{ hasCenter && (
+			{ ! isTooNarrowForDocumentBar && (
 				<motion.div
 					className="editor-header__center"
 					variants={ toolbarVariations }

@@ -77,3 +77,6 @@
 	}
 }
 
+.editor-header__toolbar:has(.editor-collapsible-block-toolbar:not(.is-collapsed)) + .editor-header__center {
+	display: none;
+}

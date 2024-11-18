@@ -11,7 +11,7 @@ import {
 	store as blockEditorStore,
 	privateApis as blockEditorPrivateApis,
 } from '@wordpress/block-editor';
-import { useEffect } from '@wordpress/element';
+import { useState } from '@wordpress/element';
 import { Button, Popover } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { next, previous } from '@wordpress/icons';
@@ -24,7 +24,7 @@ import { unlock } from '../../lock-unlock';
 
 const { useHasBlockToolbar } = unlock( blockEditorPrivateApis );
 
-export default function CollapsibleBlockToolbar( { isCollapsed, onToggle } ) {
+export default function CollapsibleBlockToolbar() {
 	const { blockSelectionStart } = useSelect( ( select ) => {
 		return {
 			blockSelectionStart:
@@ -32,24 +32,9 @@ export default function CollapsibleBlockToolbar( { isCollapsed, onToggle } ) {
 		};
 	}, [] );
 	const hasBlockToolbar = useHasBlockToolbar();
+	const [ isCollapsed, setIsCollapsed ] = useState( false );
 
 	const hasBlockSelection = !! blockSelectionStart;
-
-	useEffect( () => {
-		// If we have a new block selection, show the block tools
-		if ( blockSelectionStart ) {
-			onToggle( false );
-		}
-	}, [ blockSelectionStart, onToggle ] );
-
-	// Reset isCollapsed when the collapsible block toolbar unmounts. It is true
-	// by default.
-	useEffect(
-		() => () => {
-			onToggle( true );
-		},
-		[ onToggle ]
-	);
 
 	if ( ! hasBlockToolbar ) {
 		return null;
@@ -65,12 +50,11 @@ export default function CollapsibleBlockToolbar( { isCollapsed, onToggle } ) {
 				<BlockToolbar hideDragHandle />
 			</div>
 			<Popover.Slot name="block-toolbar" />
-
 			<Button
 				className="editor-collapsible-block-toolbar__toggle"
 				icon={ isCollapsed ? next : previous }
 				onClick={ () => {
-					onToggle( ! isCollapsed );
+					setIsCollapsed( ! isCollapsed );
 				} }
 				label={
 					isCollapsed
