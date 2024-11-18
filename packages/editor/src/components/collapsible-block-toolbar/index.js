@@ -42,6 +42,14 @@ export default function CollapsibleBlockToolbar( { isCollapsed, onToggle } ) {
 		}
 	}, [ blockSelectionStart, onToggle ] );
 
+	// Reset isCollapsed when the collapsible block toolbar unmounts.
+	useEffect(
+		() => () => {
+			onToggle( true );
+		},
+		[ onToggle ]
+	);
+
 	if ( ! hasBlockToolbar ) {
 		return null;
 	}
