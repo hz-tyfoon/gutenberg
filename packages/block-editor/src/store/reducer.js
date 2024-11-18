@@ -2246,8 +2246,8 @@ const withDerivedBlockEditingModes = ( reducer ) => ( state, action ) => {
 						'contentOnly'
 					);
 
-					// Content is only editable in navigation mode.
-					if ( isNavMode ) {
+					// Content is only editable when not zoomed out.
+					if ( ! isZoomedOut ) {
 						recurseInnerBlocks(
 							nextState,
 							sectionClientId,
@@ -2303,10 +2303,14 @@ const withDerivedBlockEditingModes = ( reducer ) => ( state, action ) => {
 					if ( ! isZoomedOut && ! isNavMode ) {
 						derivedBlockEditingModes.set( clientId, 'contentOnly' );
 					}
+					// Zoomed out doesn't allow content editing, so don't try enabling
+					// inner blocks.
 					recurseInnerBlocks( nextState, clientId, ( block ) => {
 						// If an inner block has bindings, it should be set to contentOnly.
 						// Else it should be set to disabled.
-						if ( hasBindings( block ) ) {
+						// Also check for zoomed out - content shouldn't be editable when
+						// zoomed out, but to be rigorous, still disable inner blocks.
+						if ( ! isZoomedOut && hasBindings( block ) ) {
 							derivedBlockEditingModes.set(
 								block.clientId,
 								'contentOnly'
