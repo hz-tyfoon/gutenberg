@@ -48,5 +48,6 @@ figcaption.block-editor-rich-text__editable [data-rich-text-placeholder]::before
 	span {
 		filter: invert(100%);
 		color: currentColor;
+		padding: 0 2px;
 	}
 }
