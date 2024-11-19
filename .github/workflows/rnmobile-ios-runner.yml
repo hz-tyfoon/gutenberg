@@ -14,11 +14,11 @@ concurrency:
 
 jobs:
     test:
-        runs-on: macos-14
+        runs-on: macos-13
         if: ${{ github.repository == 'WordPress/gutenberg' || github.event_name == 'pull_request' }}
         strategy:
             matrix:
-                xcode: ['15.4']
+                xcode: ['15.0.1']
                 device: ['iPhone 14']
                 native-test-name: [gutenberg-editor-rendering]
 
