@@ -10,7 +10,10 @@ import {
 	registerBlockType,
 	unregisterBlockType,
 	createBlock,
+	privateApis,
 } from '@wordpress/blocks';
+import { select } from '@wordpress/data';
+import { store as preferencesStore } from '@wordpress/preferences';
 
 /**
  * Internal dependencies
@@ -38,7 +41,28 @@ import {
 	blockEditingModes,
 	openedBlockSettingsMenu,
 	expandedBlock,
+	withDerivedBlockEditingModes,
 } from '../reducer';
+
+import { unlock } from '../../lock-unlock';
+import { sectionRootClientIdKey } from '.././private-keys';
+
+const { isContentBlock } = unlock( privateApis );
+
+jest.mock( '@wordpress/data/src/select', () => {
+	const actualSelect = jest.requireActual( '@wordpress/data/src/select' );
+
+	return {
+		select: jest.fn( ( ...args ) => actualSelect.select( ...args ) ),
+	};
+} );
+
+jest.mock( '@wordpress/blocks/src/api/utils', () => {
+	return {
+		...jest.requireActual( '@wordpress/blocks/src/api/utils' ),
+		isContentBlock: jest.fn(),
+	};
+} );
 
 const noop = () => {};
 
@@ -3542,6 +3566,508 @@ describe( 'state', () => {
 			} );
 
 			expect( state ).toBe( null );
+		} );
+	} );
+
+	describe( 'withDerivedBlockEditingModes', () => {
+		function createOrderFromTree( tree ) {
+			const order = new Map();
+			function processBlocks( _blocks, parentClientId = '' ) {
+				if ( _blocks?.length ) {
+					const innerOrder = [];
+					_blocks.forEach( ( block ) => {
+						// Add this block's clientId to parent's array
+						innerOrder.push( block.clientId );
+
+						const innerBlocks =
+							tree.get( `controlled||${ block.clientId }` )
+								?.innerBlocks ??
+							tree.get( block.clientId )?.innerBlocks;
+
+						// Process inner blocks recursively
+						processBlocks( innerBlocks, block.clientId );
+					} );
+					order.set( parentClientId, innerOrder );
+				}
+			}
+			processBlocks( tree.get( '' ).innerBlocks, '' );
+			return order;
+		}
+
+		function createByClientIdFromTree( tree ) {
+			const byClientId = new Map();
+			tree.forEach( ( block, clientId ) => {
+				if (
+					clientId.startsWith( 'controlled||' ) ||
+					clientId === ''
+				) {
+					return;
+				}
+				byClientId.set( clientId, {
+					...block,
+					innerBlocks: undefined,
+				} );
+			} );
+			return byClientId;
+		}
+
+		function createParentsFromTree( tree ) {
+			const parents = new Map();
+			function processBlock( block, parentClientId = '' ) {
+				parents.set( block.clientId, parentClientId );
+
+				const innerBlocks =
+					tree.get( `controlled||${ block.clientId }` )
+						?.innerBlocks ??
+					tree.get( block.clientId )?.innerBlocks;
+
+				// Process inner blocks recursively
+				if ( innerBlocks?.length ) {
+					innerBlocks.forEach( ( innerBlock ) => {
+						processBlock( innerBlock, block.clientId );
+					} );
+				}
+			}
+			tree.get( '' ).innerBlocks.forEach( ( block ) => {
+				processBlock( block, '' );
+			} );
+			return parents;
+		}
+
+		function createControlledInnerBlocksFromTree( tree ) {
+			const controlledInnerBlocks = {};
+			for ( const [ key ] of tree ) {
+				if ( key.startsWith( 'controlled||' ) ) {
+					// Extract the clientId from the key
+					const clientId = key.split( '||' )[ 1 ];
+					controlledInnerBlocks[ clientId ] = true;
+				}
+			}
+			return controlledInnerBlocks;
+		}
+
+		const tree = new Map(
+			Object.entries( {
+				'': {
+					innerBlocks: [
+						{
+							name: 'core/group',
+							clientId: 'group-1',
+							attributes: {},
+							innerBlocks: [
+								{
+									name: 'core/paragraph',
+									clientId: 'paragraph-1',
+									attributes: {},
+									innerBlocks: [],
+								},
+							],
+						},
+						{
+							name: 'core/block',
+							clientId: 'pattern-1',
+							attributes: {},
+							innerBlocks: [],
+						},
+					],
+				},
+				'group-1': {
+					name: 'core/group',
+					clientId: 'group-1',
+					attributes: {},
+					innerBlocks: [
+						{
+							name: 'core/group',
+							clientId: 'group-2',
+							attributes: {},
+							innerBlocks: [
+								{
+									name: 'core/paragraph',
+									clientId: 'paragraph-1',
+									attributes: {},
+									innerBlocks: [],
+								},
+							],
+						},
+					],
+				},
+				'group-2': {
+					name: 'core/group',
+					clientId: 'group-2',
+					attributes: {},
+					innerBlocks: [
+						{
+							name: 'core/paragraph',
+							clientId: 'paragraph-1',
+							attributes: {},
+							innerBlocks: [],
+						},
+					],
+				},
+				'paragraph-1': {
+					name: 'core/paragraph',
+					clientId: 'paragraph-1',
+					attributes: {},
+					innerBlocks: [],
+				},
+				'paragraph-2': {
+					name: 'core/paragraph',
+					clientId: 'paragraph-2',
+					attributes: {
+						metadata: {
+							bindings: {
+								__default: {
+									source: 'core/pattern-overrides',
+								},
+							},
+						},
+					},
+					innerBlocks: [],
+				},
+				'paragraph-3': {
+					name: 'core/paragraph',
+					clientId: 'paragraph-3',
+					attributes: {},
+					innerBlocks: [],
+				},
+				'paragraph-4': {
+					name: 'core/paragraph',
+					clientId: 'paragraph-4',
+					attributes: {
+						metadata: {
+							bindings: {
+								__default: {
+									source: 'core/pattern-overrides',
+								},
+							},
+						},
+					},
+					innerBlocks: [],
+				},
+				'pattern-1': {
+					name: 'core/block',
+					clientId: 'pattern-1',
+					attributes: {},
+					innerBlocks: [],
+				},
+				'controlled||pattern-1': {
+					innerBlocks: [
+						{
+							name: 'core/paragraph',
+							clientId: 'paragraph-2',
+							attributes: {
+								metadata: {
+									bindings: {
+										__default: {
+											source: 'core/pattern-overrides',
+										},
+									},
+								},
+							},
+							innerBlocks: [],
+						},
+						{
+							name: 'core/paragraph',
+							clientId: 'paragraph-3',
+							attributes: {},
+							innerBlocks: [],
+						},
+						{
+							name: 'core/block',
+							clientId: 'pattern-2',
+							attributes: {},
+							innerBlocks: [
+								{
+									name: 'core/paragraph',
+									clientId: 'paragraph-4',
+									attributes: {
+										metadata: {
+											bindings: {
+												__default: {
+													source: 'core/pattern-overrides',
+												},
+											},
+										},
+									},
+									innerBlocks: [],
+								},
+							],
+						},
+					],
+				},
+				'pattern-2': {
+					name: 'core/block',
+					clientId: 'pattern-2',
+					attributes: {},
+					innerBlocks: [],
+				},
+				'controlled||pattern-2': {
+					innerBlocks: [
+						{
+							name: 'core/paragraph',
+							clientId: 'paragraph-4',
+							attributes: {
+								metadata: {
+									bindings: {
+										__default: {
+											source: 'core/pattern-overrides',
+										},
+									},
+								},
+							},
+							innerBlocks: [],
+						},
+					],
+				},
+			} )
+		);
+
+		const initialState = {
+			settings: { [ sectionRootClientIdKey ]: '' },
+			zoomLevel: 100,
+			blocks: {
+				tree,
+				order: createOrderFromTree( tree ),
+				byClientId: createByClientIdFromTree( tree ),
+				parents: createParentsFromTree( tree ),
+				controlledInnerBlocks:
+					createControlledInnerBlocksFromTree( tree ),
+			},
+		};
+
+		beforeEach( () => {
+			isContentBlock.mockImplementation(
+				( blockName ) => blockName === 'core/paragraph'
+			);
+		} );
+
+		afterAll( () => {
+			isContentBlock.mockRestore();
+		} );
+
+		it( 'returns expected block editing modes when switching from zoomed in to zoomed out', () => {
+			select.mockImplementation( ( storeName ) => {
+				if ( storeName === preferencesStore ) {
+					return {
+						get: jest.fn( () => 'edit' ),
+					};
+				}
+				return select( storeName );
+			} );
+
+			const action = {
+				type: 'SET_ZOOM_LEVEL',
+				value: 'auto-scaled',
+			};
+
+			function reducer() {
+				return {
+					...initialState,
+					zoomLevel: action.value,
+				};
+			}
+
+			const { defaultBlockEditingMode, derivedBlockEditingModes } =
+				withDerivedBlockEditingModes( reducer )( initialState, action );
+
+			const expectedBlockEditingModes = {
+				'': 'contentOnly', // Section root.
+				'group-1': 'contentOnly', // Section block.
+				'group-2': undefined,
+				'paragraph-1': undefined,
+				'pattern-1': 'contentOnly', // Section block.
+				'paragraph-2': 'disabled',
+				'paragraph-3': 'disabled',
+				'pattern-2': 'disabled',
+				'paragraph-4': 'disabled',
+			};
+
+			Object.entries( expectedBlockEditingModes ).forEach(
+				( [ blockId, expectedMode ] ) => {
+					expect( derivedBlockEditingModes.get( blockId ) ).toBe(
+						expectedMode
+					);
+				}
+			);
+			expect( defaultBlockEditingMode ).toBe( 'disabled' );
+
+			select.mockImplementation( ( storeName ) => {
+				if ( storeName === preferencesStore ) {
+					return {
+						get: jest.fn( () => 'navigation' ),
+					};
+				}
+				return select( storeName );
+			} );
+
+			const {
+				defaultBlockEditingMode: navigationDefaultBlockEditingMode,
+				derivedBlockEditingModes: navigationDerivedBlockEditingModes,
+			} = withDerivedBlockEditingModes( reducer )( initialState, action );
+
+			Object.entries( expectedBlockEditingModes ).forEach(
+				( [ blockId, expectedMode ] ) => {
+					expect(
+						navigationDerivedBlockEditingModes.get( blockId )
+					).toBe( expectedMode );
+				}
+			);
+			expect( navigationDefaultBlockEditingMode ).toBe( 'disabled' );
+		} );
+
+		it( 'returns expected pattern block editing modes when switching from zoomed out to zoomed in', () => {
+			select.mockImplementation( ( storeName ) => {
+				if ( storeName === preferencesStore ) {
+					return {
+						get: jest.fn( () => 'edit' ),
+					};
+				}
+				return select( storeName );
+			} );
+
+			const action = {
+				type: 'RESET_ZOOM_LEVEL',
+			};
+
+			const initialStateZoomedOut = {
+				...initialState,
+				zoomLevel: 'auto-scaled',
+			};
+
+			function reducer() {
+				return {
+					...initialStateZoomedOut,
+					zoomLevel: 100,
+				};
+			}
+
+			const { defaultBlockEditingMode, derivedBlockEditingModes } =
+				withDerivedBlockEditingModes( reducer )(
+					initialStateZoomedOut,
+					action
+				);
+
+			const expectedBlockEditingModes = {
+				'': undefined,
+				'group-1': undefined,
+				'group-2': undefined,
+				'paragraph-1': undefined,
+				'pattern-1': 'contentOnly', // Pattern block.
+				'paragraph-2': 'contentOnly', // Pattern override.
+				'paragraph-3': 'disabled', // Non-overridden block in pattern.
+				'pattern-2': 'disabled', // Nested pattern.
+				'paragraph-4': 'disabled', // Block in nested pattern.
+			};
+
+			Object.entries( expectedBlockEditingModes ).forEach(
+				( [ blockId, expectedMode ] ) => {
+					expect( derivedBlockEditingModes.get( blockId ) ).toBe(
+						expectedMode
+					);
+				}
+			);
+			expect( defaultBlockEditingMode ).toBe( 'default' );
+		} );
+
+		it( 'returns expected block editing modes when switching from edit to navigation mode', () => {
+			select.mockImplementation( ( storeName ) => {
+				if ( storeName === preferencesStore ) {
+					return {
+						get: jest.fn( () => 'navigation' ),
+					};
+				}
+				return select( storeName );
+			} );
+
+			const action = {
+				type: 'SET_EDITOR_MODE',
+				mode: 'navigation',
+			};
+
+			function reducer() {
+				return {
+					...initialState,
+				};
+			}
+
+			const { defaultBlockEditingMode, derivedBlockEditingModes } =
+				withDerivedBlockEditingModes( reducer )( initialState, action );
+
+			const expectedBlockEditingModes = {
+				'': 'contentOnly', // Section root.
+				'group-1': 'contentOnly', // Section block.
+				'group-2': undefined, // Non-content block in section.
+				'paragraph-1': 'contentOnly', // Content block in section.
+				'pattern-1': 'contentOnly', // Section block.
+				'paragraph-2': 'contentOnly', // Pattern override.
+				'paragraph-3': 'disabled', // Non-overridden block in pattern.
+				'pattern-2': 'disabled', // Nested pattern.
+				'paragraph-4': 'disabled', // Block in nested pattern.
+			};
+
+			Object.entries( expectedBlockEditingModes ).forEach(
+				( [ blockId, expectedMode ] ) => {
+					expect( derivedBlockEditingModes.get( blockId ) ).toBe(
+						expectedMode
+					);
+				}
+			);
+			expect( defaultBlockEditingMode ).toBe( 'disabled' );
+		} );
+
+		it( 'handles changes to the section root in zoomed out mode', () => {
+			select.mockImplementation( ( storeName ) => {
+				if ( storeName === preferencesStore ) {
+					return {
+						get: jest.fn( () => 'edit' ),
+					};
+				}
+				return select( storeName );
+			} );
+
+			const initialZoomedOutState = {
+				...initialState,
+				zoomLevel: 'auto-scaled',
+			};
+
+			const action = {
+				type: 'UPDATE_SETTINGS',
+				mode: 'navigation',
+			};
+
+			function reducer() {
+				return {
+					...initialZoomedOutState,
+					settings: { [ sectionRootClientIdKey ]: 'group-1' },
+				};
+			}
+
+			const { defaultBlockEditingMode, derivedBlockEditingModes } =
+				withDerivedBlockEditingModes( reducer )(
+					initialZoomedOutState,
+					action
+				);
+
+			const expectedBlockEditingModes = {
+				'': undefined,
+				'group-1': 'contentOnly', // Section root.
+				'group-2': 'contentOnly', // Section.
+				'paragraph-1': undefined, // Content block in section.
+				'pattern-1': undefined,
+				'paragraph-2': 'disabled',
+				'paragraph-3': 'disabled',
+				'pattern-2': 'disabled',
+				'paragraph-4': 'disabled',
+			};
+
+			Object.entries( expectedBlockEditingModes ).forEach(
+				( [ blockId, expectedMode ] ) => {
+					expect( derivedBlockEditingModes.get( blockId ) ).toBe(
+						expectedMode
+					);
+				}
+			);
+			expect( defaultBlockEditingMode ).toBe( 'disabled' );
 		} );
 	} );
 } );

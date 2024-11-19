@@ -2228,162 +2228,168 @@ function hasBindings( block ) {
  * @param {Function} reducer The reducer to wrap.
  * @return {Function} An enhanced reducer that includes derived block editing modes.
  */
-const withDerivedBlockEditingModes = ( reducer ) => ( state, action ) => {
-	const nextState = reducer( state, action );
+export const withDerivedBlockEditingModes =
+	( reducer ) => ( state, action ) => {
+		const nextState = reducer( state, action );
 
-	// An exception is needed here to still recompute the block editing modes when
-	// the editor mode changes since the editor mode isn't stored within the
-	// block editor state and changing it won't trigger an altered new state.
-	if ( action.type !== 'SET_EDITOR_MODE' && nextState === state ) {
-		return state;
-	}
+		// An exception is needed here to still recompute the block editing modes when
+		// the editor mode changes since the editor mode isn't stored within the
+		// block editor state and changing it won't trigger an altered new state.
+		if ( action.type !== 'SET_EDITOR_MODE' && nextState === state ) {
+			return state;
+		}
 
-	const isZoomedOut =
-		nextState?.zoomLevel < 100 || nextState?.zoomLevel === 'auto-scaled';
-	const isNavMode =
-		select( preferencesStore )?.get( 'core', 'editorTool' ) ===
-		'navigation';
+		const isZoomedOut =
+			nextState?.zoomLevel < 100 ||
+			nextState?.zoomLevel === 'auto-scaled';
+		const isNavMode =
+			select( preferencesStore )?.get( 'core', 'editorTool' ) ===
+			'navigation';
 
-	switch ( action.type ) {
-		case 'RESET_BLOCKS':
-		case 'INSERT_BLOCKS':
-		case 'RECEIVE_BLOCKS':
-		case 'REPLACE_BLOCKS':
-		case 'REPLACE_INNER_BLOCKS':
-		case 'REMOVE_BLOCKS':
-		case 'MOVE_BLOCKS_TO_POSITION':
-		case 'UPDATE_SETTINGS':
-		case 'SET_EDITOR_MODE':
-		case 'RESET_ZOOM_LEVEL':
-		case 'SET_ZOOM_LEVEL': {
-			let defaultBlockEditingMode;
-			const derivedBlockEditingModes = new Map();
-			let sectionClientIds;
+		switch ( action.type ) {
+			case 'RESET_BLOCKS':
+			case 'INSERT_BLOCKS':
+			case 'RECEIVE_BLOCKS':
+			case 'REPLACE_BLOCKS':
+			case 'REPLACE_INNER_BLOCKS':
+			case 'REMOVE_BLOCKS':
+			case 'MOVE_BLOCKS_TO_POSITION':
+			case 'UPDATE_SETTINGS':
+			case 'SET_EDITOR_MODE':
+			case 'RESET_ZOOM_LEVEL':
+			case 'SET_ZOOM_LEVEL': {
+				let defaultBlockEditingMode;
+				const derivedBlockEditingModes = new Map();
+				let sectionClientIds;
 
-			// In zoomed out mode or navigation mode, sections and the section root
-			// are set to contentOnly.
-			// Navigation mode also allows content editing. Blocks within sections
-			// that have role: content are set to contentOnly.
-			if ( isZoomedOut || isNavMode ) {
-				// When there are sections, the majority of blocks are disabled,
-				// so the default block editing mode is set to disabled.
-				defaultBlockEditingMode = 'disabled';
-				const sectionRootClientId =
-					nextState.settings?.[ sectionRootClientIdKey ];
-				derivedBlockEditingModes.set(
-					sectionRootClientId,
-					'contentOnly'
+				// In zoomed out mode or navigation mode, sections and the section root
+				// are set to contentOnly.
+				// Navigation mode also allows content editing. Blocks within sections
+				// that have role: content are set to contentOnly.
+				if ( isZoomedOut || isNavMode ) {
+					// When there are sections, the majority of blocks are disabled,
+					// so the default block editing mode is set to disabled.
+					defaultBlockEditingMode = 'disabled';
+					const sectionRootClientId =
+						nextState.settings?.[ sectionRootClientIdKey ];
+					derivedBlockEditingModes.set(
+						sectionRootClientId,
+						'contentOnly'
+					);
+					sectionClientIds =
+						nextState.blocks.order.get( sectionRootClientId );
+
+					if ( ! sectionClientIds?.length ) {
+						return {
+							...nextState,
+							defaultBlockEditingMode,
+							derivedBlockEditingModes,
+						};
+					}
+					for ( const sectionClientId of sectionClientIds ) {
+						derivedBlockEditingModes.set(
+							sectionClientId,
+							'contentOnly'
+						);
+
+						// Content is only editable when not zoomed out.
+						if ( ! isZoomedOut ) {
+							recurseInnerBlocks(
+								nextState,
+								sectionClientId,
+								( block ) => {
+									if ( isContentBlock( block.name ) ) {
+										derivedBlockEditingModes.set(
+											block.clientId,
+											'contentOnly'
+										);
+									}
+								}
+							);
+						}
+					}
+				} else {
+					defaultBlockEditingMode = 'default';
+				}
+
+				// Handle synced patterns.
+				const syncedPatternClientIds = Object.keys(
+					state.blocks.controlledInnerBlocks
+				).filter(
+					( clientId ) =>
+						state.blocks.byClientId?.get( clientId )?.name ===
+						'core/block'
 				);
-				sectionClientIds =
-					nextState.blocks.order.get( sectionRootClientId );
 
-				if ( ! sectionClientIds?.length ) {
+				if ( ! syncedPatternClientIds?.length ) {
 					return {
 						...nextState,
 						defaultBlockEditingMode,
 						derivedBlockEditingModes,
 					};
 				}
-				for ( const sectionClientId of sectionClientIds ) {
-					derivedBlockEditingModes.set(
-						sectionClientId,
-						'contentOnly'
-					);
 
-					// Content is only editable when not zoomed out.
-					if ( ! isZoomedOut ) {
-						recurseInnerBlocks(
-							nextState,
-							sectionClientId,
-							( block ) => {
-								if ( isContentBlock( block.name ) ) {
-									derivedBlockEditingModes.set(
-										block.clientId,
-										'contentOnly'
-									);
-								}
+				for ( const clientId of syncedPatternClientIds ) {
+					if (
+						hasParentWithName( nextState, clientId, 'core/block' )
+					) {
+						// This is a nested pattern block, it should be set to disabled,
+						// along with all its child blocks.
+						derivedBlockEditingModes.set( clientId, 'disabled' );
+						recurseInnerBlocks( nextState, clientId, ( block ) => {
+							derivedBlockEditingModes.set(
+								block.clientId,
+								'disabled'
+							);
+						} );
+					} else {
+						// If not in zoomed out or navigation mode, set the parent pattern
+						// block to contentOnly.
+						// If we are in zoomed out or navigation mode, the pattern block
+						// will already have been set to contentOnly when it's a section.
+						if ( ! isZoomedOut && ! isNavMode ) {
+							derivedBlockEditingModes.set(
+								clientId,
+								'contentOnly'
+							);
+						}
+						recurseInnerBlocks( nextState, clientId, ( block ) => {
+							// If an inner block has bindings, it should be set to contentOnly.
+							// Else it should be set to disabled.
+							// Also check for zoomed out - content shouldn't be editable when
+							// zoomed out, but to be rigorous, still disable inner blocks.
+							if ( ! isZoomedOut && hasBindings( block ) ) {
+								derivedBlockEditingModes.set(
+									block.clientId,
+									'contentOnly'
+								);
+							} else {
+								derivedBlockEditingModes.set(
+									block.clientId,
+									'disabled'
+								);
 							}
-						);
+						} );
 					}
 				}
-			} else {
-				defaultBlockEditingMode = 'default';
-			}
 
-			// Handle synced patterns.
-			//
-			const syncedPatternClientIds = Object.keys(
-				state.blocks.controlledInnerBlocks
-			).filter(
-				( clientId ) =>
-					state.blocks.byClientId?.get( clientId )?.name ===
-					'core/block'
-			);
-
-			if ( ! syncedPatternClientIds?.length ) {
 				return {
 					...nextState,
 					defaultBlockEditingMode,
 					derivedBlockEditingModes,
 				};
 			}
-
-			for ( const clientId of syncedPatternClientIds ) {
-				if ( hasParentWithName( nextState, clientId, 'core/block' ) ) {
-					// This is a nested pattern block, it should be set to disabled,
-					// along with all its child blocks.
-					derivedBlockEditingModes.set( clientId, 'disabled' );
-					recurseInnerBlocks( nextState, clientId, ( block ) => {
-						derivedBlockEditingModes.set(
-							block.clientId,
-							'disabled'
-						);
-					} );
-				} else {
-					// If not in zoomed out or navigation mode, set the parent pattern
-					// block to contentOnly.
-					// If we are in zoomed out or navigation mode, the pattern block
-					// will already have been set to contentOnly when it's a section.
-					if ( ! isZoomedOut && ! isNavMode ) {
-						derivedBlockEditingModes.set( clientId, 'contentOnly' );
-					}
-					recurseInnerBlocks( nextState, clientId, ( block ) => {
-						// If an inner block has bindings, it should be set to contentOnly.
-						// Else it should be set to disabled.
-						// Also check for zoomed out - content shouldn't be editable when
-						// zoomed out, but to be rigorous, still disable inner blocks.
-						if ( ! isZoomedOut && hasBindings( block ) ) {
-							derivedBlockEditingModes.set(
-								block.clientId,
-								'contentOnly'
-							);
-						} else {
-							derivedBlockEditingModes.set(
-								block.clientId,
-								'disabled'
-							);
-						}
-					} );
-				}
-			}
-
-			return {
-				...nextState,
-				defaultBlockEditingMode,
-				derivedBlockEditingModes,
-			};
 		}
-	}
 
-	// If there's no change, the defaultBlockEditingMode and derivedBlockEditingModes
-	// from the previous state need to be preserved.
-	nextState.defaultBlockEditingMode =
-		state?.defaultBlockEditingMode ?? 'default';
-	nextState.derivedBlockEditingModes =
-		state?.derivedBlockEditingModes ?? new Map();
+		// If there's no change, the defaultBlockEditingMode and derivedBlockEditingModes
+		// from the previous state need to be preserved.
+		nextState.defaultBlockEditingMode =
+			state?.defaultBlockEditingMode ?? 'default';
+		nextState.derivedBlockEditingModes =
+			state?.derivedBlockEditingModes ?? new Map();
 
-	return nextState;
-};
+		return nextState;
+	};
 
 function withAutomaticChangeReset( reducer ) {
 	return ( state, action ) => {
