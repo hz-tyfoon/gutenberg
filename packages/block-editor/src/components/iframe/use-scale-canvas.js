@@ -260,7 +260,7 @@ export function useScaleCanvas( {
 				// Update previous values.
 				prevClientHeightRef.current = clientHeight;
 				prevFrameSizeRef.current = frameSize;
-				prevScaleRef.current = scale;
+				prevScaleRef.current = scaleValue;
 
 				// Set the final scroll position that was just animated to.
 				iframeDocument.documentElement.scrollTop = scrollTopNext;
