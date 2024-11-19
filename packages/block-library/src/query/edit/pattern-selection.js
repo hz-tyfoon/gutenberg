@@ -38,6 +38,14 @@ export function PatternSelectionModal( {
 	);
 }
 
+export function useBlockPatterns( clientId, attributes ) {
+	const blockNameForPatterns = useBlockNameForPatterns(
+		clientId,
+		attributes
+	);
+	return usePatterns( clientId, blockNameForPatterns );
+}
+
 export default function PatternSelection( {
 	clientId,
 	attributes,
@@ -45,6 +53,21 @@ export default function PatternSelection( {
 } ) {
 	const [ searchValue, setSearchValue ] = useState( '' );
 	const { replaceBlock, selectBlock } = useDispatch( blockEditorStore );
+	const blockPatterns = useBlockPatterns( clientId, attributes );
+	/*
+	 * When we preview Query Loop blocks we should prefer the current
+	 * block's postType, which is passed through block context.
+	 */
+	const blockPreviewContext = useMemo(
+		() => ( {
+			previewPostType: attributes.query.postType,
+		} ),
+		[ attributes.query.postType ]
+	);
+	const filteredBlockPatterns = useMemo( () => {
+		return searchPatterns( blockPatterns, searchValue );
+	}, [ blockPatterns, searchValue ] );
+
 	const onBlockPatternSelect = ( pattern, blocks ) => {
 		const { newBlocks, queryClientIds } = getTransformedBlocksFromPattern(
 			blocks,
@@ -55,23 +78,6 @@ export default function PatternSelection( {
 			selectBlock( queryClientIds[ 0 ] );
 		}
 	};
-	// When we preview Query Loop blocks we should prefer the current
-	// block's postType, which is passed through block context.
-	const blockPreviewContext = useMemo(
-		() => ( {
-			previewPostType: attributes.query.postType,
-		} ),
-		[ attributes.query.postType ]
-	);
-	const blockNameForPatterns = useBlockNameForPatterns(
-		clientId,
-		attributes
-	);
-	const blockPatterns = usePatterns( clientId, blockNameForPatterns );
-	const filteredBlockPatterns = useMemo( () => {
-		return searchPatterns( blockPatterns, searchValue );
-	}, [ blockPatterns, searchValue ] );
-
 	return (
 		<div className="block-library-query-pattern__selection-content">
 			<div className="block-library-query-pattern__selection-search">
