@@ -109,6 +109,8 @@ test.describe( 'Zoom Out', () => {
 		page,
 		editor,
 	} ) => {
+		// Add some patterns into the page.
+		await editor.setContent( EDITOR_ZOOM_OUT_CONTENT );
 		// Find the scroll container element
 		await page.evaluate( () => {
 			const { activeElement } =
