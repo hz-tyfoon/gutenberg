@@ -17,6 +17,7 @@ import {
 	privateApis as blockEditorPrivateApis,
 	store as blockEditorStore,
 	useSettings,
+	BlockEditorProvider,
 	__unstableEditorStyles as EditorStyles,
 	__unstableIframe as Iframe,
 	__experimentalUseMultipleOriginColorsAndGradients as useMultipleOriginColorsAndGradients,
@@ -326,6 +327,73 @@ function StyleBook( {
 		</EditorCanvasContainer>
 	);
 }
+
+/**
+ * Style Book Preview component renders the stylebook without the Editor dependency.
+ *
+ * @param {Object} props            Component props.
+ * @param {string} props.path       Path to the selected block.
+ * @param {Object} props.userConfig User configuration.
+ * @return {Object} Style Book Preview component.
+ */
+export const StyleBookPreview = ( { path = '', userConfig = {} } ) => {
+	const [ resizeObserver, sizes ] = useResizeObserver();
+	const { colors, gradients } = useMultipleOriginColorsAndGradients();
+	// Exclude the default colors and gradients.
+	const themeColors = colors?.filter( ( color ) => color.slug === 'theme' );
+	const themeGradients = gradients?.filter(
+		( gradient ) => gradient.slug === 'theme'
+	);
+
+	const examples = getExamples( {
+		colors: themeColors,
+		gradients: themeGradients,
+		duotones: [], // Classic themes don't support duotone palettes.
+	} );
+	const examplesForSinglePageUse = getExamplesForSinglePageUse( examples );
+
+	const { base: baseConfig } = useContext( GlobalStylesContext );
+	const goTo = getStyleBookNavigationFromPath( path );
+
+	const mergedConfig = useMemo( () => {
+		if ( ! isObjectEmpty( userConfig ) && ! isObjectEmpty( baseConfig ) ) {
+			return mergeBaseAndUserConfigs( baseConfig, userConfig );
+		}
+		return {};
+	}, [ baseConfig, userConfig ] );
+
+	const originalSettings = useSelect(
+		( select ) => select( blockEditorStore ).getSettings(),
+		[]
+	);
+	const [ globalStyles ] = useGlobalStylesOutputWithConfig( mergedConfig );
+
+	const settings = useMemo(
+		() => ( {
+			...originalSettings,
+			styles:
+				! isObjectEmpty( globalStyles ) && ! isObjectEmpty( userConfig )
+					? globalStyles
+					: originalSettings.styles,
+			isPreviewMode: true,
+		} ),
+		[ globalStyles, originalSettings, userConfig ]
+	);
+
+	return (
+		<div className="edit-site-style-book">
+			{ resizeObserver }
+			<BlockEditorProvider settings={ settings }>
+				<StyleBookBody
+					examples={ examplesForSinglePageUse }
+					settings={ settings }
+					goTo={ goTo }
+					sizes={ sizes }
+				/>
+			</BlockEditorProvider>
+		</div>
+	);
+};
 
 export const StyleBookBody = ( {
 	category,

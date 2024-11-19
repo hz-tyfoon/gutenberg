@@ -7,94 +7,19 @@ import {
 	__experimentalGetCoreBlocks,
 	__experimentalRegisterExperimentalCoreBlocks,
 } from '@wordpress/block-library';
-import { dispatch, useSelect } from '@wordpress/data';
+import { dispatch } from '@wordpress/data';
 import { createRoot, StrictMode } from '@wordpress/element';
 import {
 	registerLegacyWidgetBlock,
 	registerWidgetGroupBlock,
 } from '@wordpress/widgets';
-import {
-	UnsavedChangesWarning,
-	privateApis as editorPrivateApis,
-} from '@wordpress/editor';
-import { privateApis as routerPrivateApis } from '@wordpress/router';
-import { useResizeObserver } from '@wordpress/compose';
-import {
-	store as blockEditorStore,
-	BlockEditorProvider,
-	__experimentalUseMultipleOriginColorsAndGradients as useMultipleOriginColorsAndGradients,
-} from '@wordpress/block-editor';
-import { __ } from '@wordpress/i18n';
+import { store as blockEditorStore } from '@wordpress/block-editor';
 
 /**
  * Internal dependencies
  */
 import './hooks';
-import { store as editSiteStore } from './store';
-import Layout from './components/layout';
-import { unlock } from './lock-unlock';
-import SidebarNavigationScreen from './components/sidebar-navigation-screen/index.js';
-import {
-	StyleBookBody,
-	getExamplesForSinglePageUse,
-} from './components/style-book';
-import { getExamples } from './components/style-book/examples';
-
-const { RouterProvider } = unlock( routerPrivateApis );
-const { GlobalStylesProvider } = unlock( editorPrivateApis );
-
-function ClassicStylebookLayout() {
-	const [ resizeObserver, sizes ] = useResizeObserver();
-	const settings = useSelect(
-		( select ) => select( blockEditorStore ).getSettings(),
-		[]
-	);
-
-	const { colors, gradients } = useMultipleOriginColorsAndGradients();
-	// Exclude the default colors and gradients.
-	const themeColors = colors?.filter( ( color ) => color.slug === 'theme' );
-	const themeGradients = gradients?.filter(
-		( gradient ) => gradient.slug === 'theme'
-	);
-
-	const examples = getExamples( {
-		colors: themeColors,
-		gradients: themeGradients,
-		duotones: [], // Classic themes don't support duotone palettes.
-	} );
-
-	// Dedupe the examples as they include all categories with repeat sections.
-	const examplesForSinglePageUse = getExamplesForSinglePageUse( examples );
-
-	const route = {
-		name: 'stylebook',
-		areas: {
-			sidebar: (
-				<SidebarNavigationScreen
-					title={ __( 'Styles' ) }
-					description={ __( 'Overview of styled blocks.' ) }
-					isRoot
-				/>
-			),
-			preview: (
-				<StyleBookBody
-					enableResizing={ false }
-					showCloseButton={ false }
-					showTabs={ false }
-					examples={ examplesForSinglePageUse }
-					settings={ settings }
-					sizes={ sizes }
-				/>
-			),
-		},
-	};
-	return (
-		<>
-			{ resizeObserver }
-			<Layout route={ route } />
-		</>
-	);
-}
+import App from './components/app';
 
 /**
  * Initializes the classic stylebook.
@@ -122,18 +47,11 @@ export function initializeClassicStylebook( id, settings ) {
 		} );
 	}
 
-	dispatch( editSiteStore ).updateSettings( settings );
+	dispatch( blockEditorStore ).updateSettings( settings );
 
 	root.render(
 		<StrictMode>
-			<GlobalStylesProvider>
-				<UnsavedChangesWarning />
-				<RouterProvider>
-					<BlockEditorProvider settings={ settings }>
-						<ClassicStylebookLayout />
-					</BlockEditorProvider>
-				</RouterProvider>
-			</GlobalStylesProvider>
+			<App />
 		</StrictMode>
 	);
 
