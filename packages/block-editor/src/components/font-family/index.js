@@ -29,15 +29,20 @@ export default function FontFamilyControl( {
 		return null;
 	}
 
-	const options = [
-		{ value: '', label: __( 'Default' ) },
-		...fontFamilies.map( ( { fontFamily, name } ) => {
-			return {
-				value: fontFamily,
-				label: name || fontFamily,
-			};
-		} ),
-	];
+	const options = (
+		<>
+			<option value="">{ __( 'Default' ) }</option>
+			{ fontFamilies.map( ( { fontFamily, name, slug } ) => (
+				<option
+					key={ slug }
+					value={ fontFamily }
+					style={ { fontFamily } }
+				>
+					{ name || fontFamily }
+				</option>
+			) ) }
+		</>
+	);
 
 	if ( ! __nextHasNoMarginBottom ) {
 		deprecated(
@@ -55,11 +60,12 @@ export default function FontFamilyControl( {
 			__next40pxDefaultSize={ __next40pxDefaultSize }
 			__nextHasNoMarginBottom={ __nextHasNoMarginBottom }
 			label={ __( 'Font' ) }
-			options={ options }
 			value={ value }
 			onChange={ onChange }
 			labelPosition="top"
 			{ ...props }
-		/>
+		>
+			{ options }
+		</SelectControl>
 	);
 }
