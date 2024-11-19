@@ -192,18 +192,6 @@ export default function QueryInspectorControls( props ) {
 
 	return (
 		<>
-			{ hasPatterns && (
-				<PanelBody
-					title={ __( 'Design' ) }
-					className="block-library-query-toolspanel__design"
-				>
-					<PatternSelection
-						attributes={ attributes }
-						clientId={ clientId }
-						showTitlesAsTooltip
-					/>
-				</PanelBody>
-			) }
 			{ !! postType && (
 				<BlockInfo>
 					<CreateNewPostLink postType={ postType } />
@@ -441,6 +429,18 @@ export default function QueryInspectorControls( props ) {
 						</ToolsPanelItem>
 					) }
 				</ToolsPanel>
+			) }
+			{ hasPatterns && (
+				<PanelBody
+					title={ __( 'Design' ) }
+					className="block-library-query-toolspanel__design"
+				>
+					<PatternSelection
+						attributes={ attributes }
+						clientId={ clientId }
+						showTitlesAsTooltip
+					/>
+				</PanelBody>
 			) }
 		</>
 	);
