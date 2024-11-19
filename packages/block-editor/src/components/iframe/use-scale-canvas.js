@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { useEffect, useRef, useState } from '@wordpress/element';
+import { useEffect, useRef } from '@wordpress/element';
 import { useReducedMotion, useResizeObserver } from '@wordpress/compose';
 
 function calculateScale( {
@@ -59,7 +59,6 @@ export function useScaleCanvas( {
 	);
 
 	const prefersReducedMotion = useReducedMotion();
-	const [ isAnimatingZoomOut, setIsAnimatingZoomOut ] = useState( false );
 	const isAutoScaled = scale === 'auto-scaled';
 
 	const scaleValue = isAutoScaled
@@ -84,13 +83,12 @@ export function useScaleCanvas( {
 			iframeDocument.documentElement.classList.add( 'is-zoomed-out' );
 		}
 
-		setIsAnimatingZoomOut( true );
 		isAnimatingRef.current = true;
 
 		return () => {
 			iframeDocument.documentElement.classList.remove( 'is-zoomed-out' );
 		};
-	}, [ iframeDocument, isZoomedOut, setIsAnimatingZoomOut ] );
+	}, [ iframeDocument, isZoomedOut ] );
 
 	// Calculate the scaling and CSS variables for the zoom out canvas
 	useEffect( () => {
@@ -111,7 +109,7 @@ export function useScaleCanvas( {
 			} );
 		}
 
-		if ( isAnimatingZoomOut || isAnimatingRef.current ) {
+		if ( isAnimatingRef.current ) {
 			// Set the value that we want to animate from.
 			// We will update them after we add the animation class on next render.
 			iframeDocument.documentElement.style.setProperty(
@@ -158,7 +156,7 @@ export function useScaleCanvas( {
 
 		let onZoomOutTransitionEnd = () => {};
 
-		if ( isAnimatingZoomOut ) {
+		if ( isAnimatingRef.current ) {
 			// Unscaled height of the current iframe container.
 			const clientHeight = iframeDocument.documentElement.clientHeight;
 
@@ -276,7 +274,6 @@ export function useScaleCanvas( {
 				iframeDocument.documentElement.classList.remove(
 					'zoom-out-animation'
 				);
-				setIsAnimatingZoomOut( false );
 
 				// Update previous values.
 				prevClientHeightRef.current = clientHeight;
@@ -327,7 +324,6 @@ export function useScaleCanvas( {
 			);
 		};
 	}, [
-		isAnimatingZoomOut,
 		isAutoScaled,
 		scaleValue,
 		frameSize,
