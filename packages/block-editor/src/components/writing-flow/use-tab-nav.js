@@ -64,7 +64,7 @@ export default function useTabNav() {
 					.focus();
 			}
 			// If we don't have any section blocks, focus the section root.
-			else {
+			else if ( sectionRootClientId ) {
 				container.current
 					.querySelector( `[data-block="${ sectionRootClientId }"]` )
 					.focus();
