@@ -73,8 +73,9 @@ function PreviewField( { item } ) {
 }
 
 export const previewField = {
-	label: __( 'Preview' ),
 	id: 'preview',
+	type: 'text', // TODO: add media/image type
+	label: __( 'Preview' ),
 	render: PreviewField,
 	enableSorting: false,
 };
@@ -95,8 +96,9 @@ function TitleField( { item } ) {
 }
 
 export const titleField = {
-	label: __( 'Template' ),
 	id: 'title',
+	type: 'text',
+	label: __( 'Template' ),
 	getValue: ( { item } ) => item.title?.rendered,
 	render: TitleField,
 	enableHiding: false,
@@ -104,8 +106,9 @@ export const titleField = {
 };
 
 export const descriptionField = {
-	label: __( 'Description' ),
 	id: 'description',
+	type: 'text',
+	label: __( 'Description' ),
 	render: ( { item } ) => {
 		return (
 			item.description && (
@@ -149,8 +152,9 @@ function AuthorField( { item } ) {
 }
 
 export const authorField = {
-	label: __( 'Author' ),
 	id: 'author',
+	type: 'text',
+	label: __( 'Author' ),
 	getValue: ( { item } ) => item.author_text,
 	render: AuthorField,
 };

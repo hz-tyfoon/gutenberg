@@ -105,8 +105,9 @@ function PreviewField( { item } ) {
 }
 
 export const previewField = {
-	label: __( 'Preview' ),
 	id: 'preview',
+	type: 'text', // TODO: add media/image type
+	label: __( 'Preview' ),
 	render: PreviewField,
 	enableSorting: false,
 };
@@ -155,8 +156,9 @@ function TitleField( { item } ) {
 }
 
 export const titleField = {
-	label: __( 'Title' ),
 	id: 'title',
+	type: 'text',
+	label: __( 'Title' ),
 	getValue: ( { item } ) => item.title?.raw || item.title,
 	render: TitleField,
 	enableHiding: false,
@@ -178,8 +180,9 @@ const SYNC_FILTERS = [
 ];
 
 export const patternStatusField = {
-	label: __( 'Sync status' ),
 	id: 'sync-status',
+	type: 'text',
+	label: __( 'Sync status' ),
 	render: ( { item } ) => {
 		const syncStatus =
 			'wp_pattern_sync_status' in item
@@ -236,8 +239,9 @@ function AuthorField( { item } ) {
 }
 
 export const templatePartAuthorField = {
-	label: __( 'Author' ),
 	id: 'author',
+	type: 'text',
+	label: __( 'Author' ),
 	getValue: ( { item } ) => item.author_text,
 	render: AuthorField,
 	filterBy: {

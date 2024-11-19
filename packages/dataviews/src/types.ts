@@ -75,7 +75,7 @@ export type Field< Item > = {
 	/**
 	 * Type of the fields.
 	 */
-	type?: FieldType;
+	type: FieldType;
 
 	/**
 	 * The unique identifier of the field.

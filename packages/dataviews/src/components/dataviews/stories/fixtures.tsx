@@ -545,10 +545,11 @@ export const themeData: Theme[] = [
 ];
 
 export const themeFields: Field< Theme >[] = [
-	{ id: 'slug', label: 'Slug' },
-	{ id: 'name', label: 'Name' },
+	{ id: 'slug', type: 'text', label: 'Slug' },
+	{ id: 'name', type: 'text', label: 'Name' },
 	{
 		id: 'description',
+		type: 'text',
 		label: 'Description',
 		render: ( { item } ) => (
 			<span className="theme-field-description">
@@ -556,11 +557,11 @@ export const themeFields: Field< Theme >[] = [
 			</span>
 		),
 	},
-	{ id: 'requires', label: 'Requires at least' },
-	{ id: 'tested', label: 'Tested up to' },
+	{ id: 'requires', type: 'text', label: 'Requires at least' },
+	{ id: 'tested', type: 'text', label: 'Tested up to' },
 	{
 		id: 'tags',
-		label: 'Tags',
+		type: 'text',
 		render: ( { item } ) => item.tags.join( ', ' ),
 	},
 ];
@@ -616,8 +617,9 @@ export const actions: Action< SpaceObject >[] = [
 
 export const fields: Field< SpaceObject >[] = [
 	{
-		label: 'Image',
 		id: 'image',
+		type: 'text', // TODO: add media/image type
+		label: 'Image',
 		header: (
 			<HStack spacing={ 1 } justify="start">
 				<Icon icon={ image } />
@@ -632,8 +634,9 @@ export const fields: Field< SpaceObject >[] = [
 		enableSorting: false,
 	},
 	{
-		label: 'Title',
 		id: 'title',
+		type: 'text',
+		label: 'Title',
 		enableHiding: false,
 		enableGlobalSearch: true,
 		render: ( { item } ) => {
@@ -642,12 +645,13 @@ export const fields: Field< SpaceObject >[] = [
 	},
 	{
 		id: 'date',
-		label: 'Date',
 		type: 'datetime',
+		label: 'Date',
 	},
 	{
-		label: 'Type',
 		id: 'type',
+		type: 'text',
+		label: 'Type',
 		enableHiding: false,
 		elements: [
 			{ value: 'Not a planet', label: 'Not a planet' },
@@ -657,20 +661,22 @@ export const fields: Field< SpaceObject >[] = [
 		],
 	},
 	{
-		label: 'Satellites',
 		id: 'satellites',
 		type: 'integer',
+		label: 'Satellites',
 		enableSorting: true,
 	},
 	{
-		label: 'Description',
 		id: 'description',
+		type: 'text',
+		label: 'Description',
 		enableSorting: false,
 		enableGlobalSearch: true,
 	},
 	{
-		label: 'Categories',
 		id: 'categories',
+		type: 'text',
+		label: 'Categories',
 		header: (
 			<HStack spacing={ 1 } justify="start">
 				<Icon icon={ category } />
