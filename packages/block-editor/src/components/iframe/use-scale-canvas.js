@@ -250,6 +250,27 @@ export function useScaleCanvas( {
 				scaleValue
 			);
 
+			const zoomOutAnimation = iframeDocument.documentElement.animate(
+				[
+					{
+						translate: `0 0`,
+						scale: prevScale,
+						paddingTop: `${ prevFrameSize / prevScale }px`,
+						paddingBottom: `${ prevFrameSize / prevScale }px`,
+					},
+					{
+						translate: `0 ${ scrollTop - scrollTopNext }px`,
+						scale: scaleValue,
+						paddingTop: `${ frameSize / scaleValue }px`,
+						paddingBottom: `${ frameSize / scaleValue }px`,
+					},
+				],
+				{
+					easing: 'cubic-bezier(0.46, 0.03, 0.52, 0.96)',
+					duration: 400,
+				}
+			);
+
 			onZoomOutTransitionEnd = () => {
 				isAnimatingRef.current = false;
 				iframeDocument.documentElement.classList.remove(
@@ -276,11 +297,7 @@ export function useScaleCanvas( {
 			if ( prefersReducedMotion ) {
 				onZoomOutTransitionEnd();
 			} else {
-				iframeDocument.documentElement.addEventListener(
-					'transitionend',
-					onZoomOutTransitionEnd,
-					{ once: true }
-				);
+				zoomOutAnimation.onfinish = onZoomOutTransitionEnd;
 			}
 		}
 
