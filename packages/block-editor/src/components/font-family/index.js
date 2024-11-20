@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { SelectControl } from '@wordpress/components';
+import { CustomSelectControl } from '@wordpress/components';
 import deprecated from '@wordpress/deprecated';
 import { __ } from '@wordpress/i18n';
 
@@ -29,20 +29,17 @@ export default function FontFamilyControl( {
 		return null;
 	}
 
-	const options = (
-		<>
-			<option value="">{ __( 'Default' ) }</option>
-			{ fontFamilies.map( ( { fontFamily, name, slug } ) => (
-				<option
-					key={ slug }
-					value={ fontFamily }
-					style={ { fontFamily } }
-				>
-					{ name || fontFamily }
-				</option>
-			) ) }
-		</>
-	);
+	const options = [
+		{
+			key: '',
+			name: __( 'Default' ),
+		},
+		...fontFamilies.map( ( { fontFamily, name } ) => ( {
+			key: fontFamily,
+			name: name || fontFamily,
+			style: { fontFamily },
+		} ) ),
+	];
 
 	if ( ! __nextHasNoMarginBottom ) {
 		deprecated(
@@ -56,16 +53,15 @@ export default function FontFamilyControl( {
 	}
 
 	return (
-		<SelectControl
+		<CustomSelectControl
 			__next40pxDefaultSize={ __next40pxDefaultSize }
 			__nextHasNoMarginBottom={ __nextHasNoMarginBottom }
 			label={ __( 'Font' ) }
 			value={ value }
 			onChange={ onChange }
 			labelPosition="top"
+			options={ options }
 			{ ...props }
-		>
-			{ options }
-		</SelectControl>
+		/>
 	);
 }
