@@ -2151,11 +2151,17 @@ const combinedReducers = combineReducers( {
  */
 function getBlockTreeBlock( state, clientId ) {
 	if ( clientId === '' ) {
+		const rootBlock = state.blocks.tree.get( clientId );
+
+		if ( ! rootBlock ) {
+			return;
+		}
+
 		// Patch the root block to have a clientId property.
 		// TODO - consider updating the blocks reducer so that the root block has this property.
 		return {
 			clientId: '',
-			...state.blocks.tree.get( clientId ),
+			...rootBlock,
 		};
 	}
 
@@ -2187,6 +2193,10 @@ function traverseBlockTree( state, clientId, callback ) {
 	}
 
 	callback( parentTree );
+
+	if ( ! parentTree?.innerBlocks?.length ) {
+		return;
+	}
 
 	for ( const block of parentTree?.innerBlocks ) {
 		traverseBlockTree( state, block.clientId, callback );
@@ -2244,7 +2254,7 @@ function hasBindings( block ) {
  *
  * @return {string|undefined} The determined editing mode for the block: 'contentOnly', 'disabled', or undefined.
  */
-function getBlockEditingModeForBlock(
+function getDerivedBlockEditingModeForBlock(
 	state,
 	clientId,
 	{
@@ -2257,10 +2267,16 @@ function getBlockEditingModeForBlock(
 ) {
 	if ( isZoomedOut || isNavMode ) {
 		// If the root block is the section root set its editing mode to contentOnly.
-		if (
-			clientId === sectionRootClientId ||
-			sectionClientIds.includes( clientId )
-		) {
+		if ( clientId === sectionRootClientId ) {
+			return 'contentOnly';
+		}
+
+		// There are no sections, so everything else is disabled.
+		if ( ! sectionClientIds?.length ) {
+			return 'disabled';
+		}
+
+		if ( sectionClientIds.includes( clientId ) ) {
 			return 'contentOnly';
 		}
 
@@ -2276,7 +2292,7 @@ function getBlockEditingModeForBlock(
 
 		// Next handle content blocks, which are either blocks with role: content
 		// or blocks that are inside synced patterns with bindings.
-		const block = state.blocks.byClientId.get( clientId );
+		const block = state.blocks.tree.get( clientId );
 
 		if ( syncedPatternClientIds.length ) {
 			const parentPatternClientId = findParentInClientIdsList(
@@ -2351,7 +2367,7 @@ function getBlockEditingModeForBlock(
 				return 'disabled';
 			}
 
-			const block = state.blocks.byClientId.get( clientId );
+			const block = state.blocks.tree.get( clientId );
 			if ( hasBindings( block ) ) {
 				return 'contentOnly';
 			}
@@ -2395,7 +2411,7 @@ function getDerivedBlockEditingModesForTree( state, treeRootClientId = '' ) {
 	);
 
 	traverseBlockTree( state, treeRootClientId, ( block ) => {
-		const _blockEditingMode = getBlockEditingModeForBlock(
+		const _blockEditingMode = getDerivedBlockEditingModeForBlock(
 			state,
 			block.clientId,
 			{
@@ -2492,17 +2508,16 @@ function updateDerivedBlockEditingModes( {
 /**
  * Higher-order reducer that adds derived block editing modes to the state.
  *
- * This reducer enhances the state with information about block editing modes,
- * computing `defaultBlockEditingMode` and `derivedBlockEditingModes` based on
- * factors like zoom level, navigation mode, and block types. It handles synced
- * patterns by setting specific editing modes for 'core/block' blocks and their
- * inner blocks, with different treatments for nested and top-level patterns.
+ * This function wraps a reducer and enhances it to handle actions that affect
+ * block editing modes. It updates the derivedBlockEditingModes in the state
+ * based on various actions such as adding, removing, or moving blocks, or changing
+ * the editor mode.
  *
- * @param {Function} reducer The reducer to wrap.
- * @return {Function} An enhanced reducer that includes derived block editing modes.
+ * @param {Function} reducer The original reducer function to be wrapped.
+ * @return {Function} A new reducer function that includes derived block editing modes handling.
  */
-export const withDerivedBlockEditingModes =
-	( reducer ) => ( state, action ) => {
+export function withDerivedBlockEditingModes( reducer ) {
+	return ( state, action ) => {
 		const nextState = reducer( state, action );
 
 		// An exception is needed here to still recompute the block editing modes when
@@ -2640,6 +2655,7 @@ export const withDerivedBlockEditingModes =
 
 		return nextState;
 	};
+}
 
 function withAutomaticChangeReset( reducer ) {
 	return ( state, action ) => {
@@ -2694,6 +2710,7 @@ function withAutomaticChangeReset( reducer ) {
 	};
 }
 
-export default withDerivedBlockEditingModes(
-	withAutomaticChangeReset( combinedReducers )
-);
+export default pipe(
+	withDerivedBlockEditingModes,
+	withAutomaticChangeReset
+)( combinedReducers );
