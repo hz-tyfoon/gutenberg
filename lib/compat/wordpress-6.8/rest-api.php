@@ -21,6 +21,8 @@ if ( ! function_exists( 'gutenberg_add_post_type_rendering_mode' ) ) {
 }
 add_action( 'rest_api_init', 'gutenberg_add_post_type_rendering_mode' );
 
+// When querying terms for a given taxonomy in the REST API, respect the default
+// query arguments set for that taxonomy upon registration.
 function gutenberg_respect_taxonomy_default_args_in_rest_api( $args ) {
 	$t = get_taxonomy( $args['taxonomy'] );
 	if ( isset( $t->args ) && is_array( $t->args ) ) {
