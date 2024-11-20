@@ -3050,7 +3050,7 @@ export const getBlockEditingMode = createRegistrySelector(
 
 			// In normal mode, top level is default mode.
 			if ( clientId === '' ) {
-				return state.defaultBlockEditingMode ?? 'default';
+				return 'default';
 			}
 
 			const rootClientId = getBlockRootClientId( state, clientId );
@@ -3066,8 +3066,7 @@ export const getBlockEditingMode = createRegistrySelector(
 			}
 			// Otherwise, check if there's an ancestor that is contentOnly
 			const parentMode = getBlockEditingMode( state, rootClientId );
-			const defaultMode = state.defaultBlockEditingMode ?? 'default';
-			return parentMode === 'contentOnly' ? defaultMode : parentMode;
+			return parentMode === 'contentOnly' ? 'default' : parentMode;
 		}
 );
 

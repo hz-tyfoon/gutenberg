@@ -2178,8 +2178,10 @@ function recurseInnerBlocks( state, clientId, callback ) {
 	}
 
 	for ( const block of parentTree?.innerBlocks ) {
-		callback( block );
-		recurseInnerBlocks( state, block.clientId, callback );
+		const continueRecursion = callback( block );
+		if ( continueRecursion !== false ) {
+			recurseInnerBlocks( state, block.clientId, callback );
+		}
 	}
 }
 
@@ -2258,7 +2260,6 @@ export const withDerivedBlockEditingModes =
 			case 'SET_EDITOR_MODE':
 			case 'RESET_ZOOM_LEVEL':
 			case 'SET_ZOOM_LEVEL': {
-				let defaultBlockEditingMode;
 				const derivedBlockEditingModes = new Map();
 				let sectionClientIds;
 
@@ -2269,20 +2270,33 @@ export const withDerivedBlockEditingModes =
 				if ( isZoomedOut || isNavMode ) {
 					// When there are sections, the majority of blocks are disabled,
 					// so the default block editing mode is set to disabled.
-					defaultBlockEditingMode = 'disabled';
 					const sectionRootClientId =
 						nextState.settings?.[ sectionRootClientIdKey ];
 					derivedBlockEditingModes.set(
 						sectionRootClientId,
 						'contentOnly'
 					);
+
+					if ( sectionRootClientId !== '' ) {
+						derivedBlockEditingModes.set( '', 'disabled' );
+						recurseInnerBlocks( nextState, '', ( block ) => {
+							if ( block.clientId === sectionRootClientId ) {
+								// Avoid recursion into the section root block.
+								return false;
+							}
+							derivedBlockEditingModes.set(
+								block.clientId,
+								'disabled'
+							);
+						} );
+					}
+
 					sectionClientIds =
 						nextState.blocks.order.get( sectionRootClientId );
 
 					if ( ! sectionClientIds?.length ) {
 						return {
 							...nextState,
-							defaultBlockEditingMode,
 							derivedBlockEditingModes,
 						};
 					}
@@ -2292,24 +2306,28 @@ export const withDerivedBlockEditingModes =
 							'contentOnly'
 						);
 
-						// Content is only editable when not zoomed out.
-						if ( ! isZoomedOut ) {
-							recurseInnerBlocks(
-								nextState,
-								sectionClientId,
-								( block ) => {
-									if ( isContentBlock( block.name ) ) {
-										derivedBlockEditingModes.set(
-											block.clientId,
-											'contentOnly'
-										);
-									}
+						recurseInnerBlocks(
+							nextState,
+							sectionClientId,
+							( block ) => {
+								// Content is only editable when not zoomed out.
+								if (
+									! isZoomedOut &&
+									isContentBlock( block.name )
+								) {
+									derivedBlockEditingModes.set(
+										block.clientId,
+										'contentOnly'
+									);
+								} else {
+									derivedBlockEditingModes.set(
+										block.clientId,
+										'disabled'
+									);
 								}
-							);
-						}
+							}
+						);
 					}
-				} else {
-					defaultBlockEditingMode = 'default';
 				}
 
 				// Handle synced patterns.
@@ -2324,7 +2342,6 @@ export const withDerivedBlockEditingModes =
 				if ( ! syncedPatternClientIds?.length ) {
 					return {
 						...nextState,
-						defaultBlockEditingMode,
 						derivedBlockEditingModes,
 					};
 				}
@@ -2375,16 +2392,13 @@ export const withDerivedBlockEditingModes =
 
 				return {
 					...nextState,
-					defaultBlockEditingMode,
 					derivedBlockEditingModes,
 				};
 			}
 		}
 
-		// If there's no change, the defaultBlockEditingMode and derivedBlockEditingModes
-		// from the previous state need to be preserved.
-		nextState.defaultBlockEditingMode =
-			state?.defaultBlockEditingMode ?? 'default';
+		// If there's no change, the derivedBlockEditingModes from the previous
+		// state need to be preserved.
 		nextState.derivedBlockEditingModes =
 			state?.derivedBlockEditingModes ?? new Map();
 

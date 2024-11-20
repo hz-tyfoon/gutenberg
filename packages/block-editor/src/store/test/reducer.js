@@ -3867,14 +3867,15 @@ describe( 'state', () => {
 				};
 			}
 
-			const { defaultBlockEditingMode, derivedBlockEditingModes } =
-				withDerivedBlockEditingModes( reducer )( initialState, action );
+			const { derivedBlockEditingModes } = withDerivedBlockEditingModes(
+				reducer
+			)( initialState, action );
 
 			const expectedBlockEditingModes = {
 				'': 'contentOnly', // Section root.
 				'group-1': 'contentOnly', // Section block.
-				'group-2': undefined,
-				'paragraph-1': undefined,
+				'group-2': 'disabled',
+				'paragraph-1': 'disabled',
 				'pattern-1': 'contentOnly', // Section block.
 				'paragraph-2': 'disabled',
 				'paragraph-3': 'disabled',
@@ -3889,7 +3890,6 @@ describe( 'state', () => {
 					);
 				}
 			);
-			expect( defaultBlockEditingMode ).toBe( 'disabled' );
 
 			select.mockImplementation( ( storeName ) => {
 				if ( storeName === preferencesStore ) {
@@ -3901,7 +3901,6 @@ describe( 'state', () => {
 			} );
 
 			const {
-				defaultBlockEditingMode: navigationDefaultBlockEditingMode,
 				derivedBlockEditingModes: navigationDerivedBlockEditingModes,
 			} = withDerivedBlockEditingModes( reducer )( initialState, action );
 
@@ -3912,7 +3911,6 @@ describe( 'state', () => {
 					).toBe( expectedMode );
 				}
 			);
-			expect( navigationDefaultBlockEditingMode ).toBe( 'disabled' );
 		} );
 
 		it( 'returns expected pattern block editing modes when switching from zoomed out to zoomed in', () => {
@@ -3941,11 +3939,9 @@ describe( 'state', () => {
 				};
 			}
 
-			const { defaultBlockEditingMode, derivedBlockEditingModes } =
-				withDerivedBlockEditingModes( reducer )(
-					initialStateZoomedOut,
-					action
-				);
+			const { derivedBlockEditingModes } = withDerivedBlockEditingModes(
+				reducer
+			)( initialStateZoomedOut, action );
 
 			const expectedBlockEditingModes = {
 				'': undefined,
@@ -3966,7 +3962,6 @@ describe( 'state', () => {
 					);
 				}
 			);
-			expect( defaultBlockEditingMode ).toBe( 'default' );
 		} );
 
 		it( 'returns expected block editing modes when switching from edit to navigation mode', () => {
@@ -3990,13 +3985,14 @@ describe( 'state', () => {
 				};
 			}
 
-			const { defaultBlockEditingMode, derivedBlockEditingModes } =
-				withDerivedBlockEditingModes( reducer )( initialState, action );
+			const { derivedBlockEditingModes } = withDerivedBlockEditingModes(
+				reducer
+			)( initialState, action );
 
 			const expectedBlockEditingModes = {
 				'': 'contentOnly', // Section root.
 				'group-1': 'contentOnly', // Section block.
-				'group-2': undefined, // Non-content block in section.
+				'group-2': 'disabled', // Non-content block in section.
 				'paragraph-1': 'contentOnly', // Content block in section.
 				'pattern-1': 'contentOnly', // Section block.
 				'paragraph-2': 'contentOnly', // Pattern override.
@@ -4012,7 +4008,6 @@ describe( 'state', () => {
 					);
 				}
 			);
-			expect( defaultBlockEditingMode ).toBe( 'disabled' );
 		} );
 
 		it( 'handles changes to the section root in zoomed out mode', () => {
@@ -4042,18 +4037,16 @@ describe( 'state', () => {
 				};
 			}
 
-			const { defaultBlockEditingMode, derivedBlockEditingModes } =
-				withDerivedBlockEditingModes( reducer )(
-					initialZoomedOutState,
-					action
-				);
+			const { derivedBlockEditingModes } = withDerivedBlockEditingModes(
+				reducer
+			)( initialZoomedOutState, action );
 
 			const expectedBlockEditingModes = {
-				'': undefined,
+				'': 'disabled',
 				'group-1': 'contentOnly', // Section root.
 				'group-2': 'contentOnly', // Section.
-				'paragraph-1': undefined, // Content block in section.
-				'pattern-1': undefined,
+				'paragraph-1': 'disabled', // Content block in section.
+				'pattern-1': 'disabled',
 				'paragraph-2': 'disabled',
 				'paragraph-3': 'disabled',
 				'pattern-2': 'disabled',
@@ -4067,7 +4060,6 @@ describe( 'state', () => {
 					);
 				}
 			);
-			expect( defaultBlockEditingMode ).toBe( 'disabled' );
 		} );
 	} );
 } );
