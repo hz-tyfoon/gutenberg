@@ -2347,7 +2347,6 @@ export const withDerivedBlockEditingModes =
 					}
 				}
 
-				// Handle synced patterns.
 				const syncedPatternClientIds = Object.keys(
 					state.blocks.controlledInnerBlocks
 				).filter(
