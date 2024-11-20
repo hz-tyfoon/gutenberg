@@ -74,6 +74,30 @@ function computeScrollTopNext(
 	);
 }
 
+function getAnimationKeyframes( transitionFrom, transitionTo ) {
+	const {
+		scaleValue: prevScale,
+		frameSize: prevFrameSize,
+		scrollTopNext: scrollTop,
+	} = transitionFrom;
+	const { scaleValue, frameSize, scrollTopNext } = transitionTo;
+
+	return [
+		{
+			translate: `0 0`,
+			scale: prevScale,
+			paddingTop: `${ prevFrameSize / prevScale }px`,
+			paddingBottom: `${ prevFrameSize / prevScale }px`,
+		},
+		{
+			translate: `0 ${ scrollTop - scrollTopNext }px`,
+			scale: scaleValue,
+			paddingTop: `${ frameSize / scaleValue }px`,
+			paddingBottom: `${ frameSize / scaleValue }px`,
+		},
+	];
+}
+
 /**
  * Handles scaling the canvas for the zoom out mode and animating between
  * the states.
@@ -329,20 +353,10 @@ export function useScaleCanvas( {
 					'zoom-out-animation'
 				);
 				animationRef.current = iframeDocument.documentElement.animate(
-					[
-						{
-							translate: `0 0`,
-							scale: prevScale,
-							paddingTop: `${ prevFrameSize / prevScale }px`,
-							paddingBottom: `${ prevFrameSize / prevScale }px`,
-						},
-						{
-							translate: `0 ${ scrollTop - scrollTopNext }px`,
-							scale: scaleValue,
-							paddingTop: `${ frameSize / scaleValue }px`,
-							paddingBottom: `${ frameSize / scaleValue }px`,
-						},
-					],
+					getAnimationKeyframes(
+						transitionFrom.current,
+						transitionTo.current
+					),
 					{
 						easing: 'cubic-bezier(0.46, 0.03, 0.52, 0.96)',
 						duration: 400,
