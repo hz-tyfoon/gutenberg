@@ -22,7 +22,7 @@ function gutenberg_add_styles_link() {
 }
 add_action( 'admin_menu', 'gutenberg_add_styles_link' );
 
-if ( isset( $_GET['page'] ) && 'gutenberg-stylebook' === $_GET['page'] ) {
+if ( isset( $_GET['page'] ) && 'gutenberg-stylebook-static' === $_GET['page'] ) {
 	// Default to is-fullscreen-mode to avoid jumps in the UI.
 	add_filter(
 		'admin_body_class',
