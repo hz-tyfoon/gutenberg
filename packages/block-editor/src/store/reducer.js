@@ -2150,6 +2150,15 @@ const combinedReducers = combineReducers( {
  *                           returns a merged tree with controlled inner blocks.
  */
 function getBlockTreeBlock( state, clientId ) {
+	if ( clientId === '' ) {
+		// Patch the root block to have a clientId property.
+		// TODO - consider updating the blocks reducer so that the root block has this property.
+		return {
+			clientId: '',
+			...state.blocks.tree.get( clientId ),
+		};
+	}
+
 	if ( ! state.blocks.controlledInnerBlocks[ clientId ] ) {
 		return state.blocks.tree.get( clientId );
 	}
@@ -2164,22 +2173,23 @@ function getBlockTreeBlock( state, clientId ) {
 }
 
 /**
- * Recursively traverses through inner blocks of a given block and executes a callback for each block.
+ * Recursively traverses through a block tree of a given block and executes a callback for each block.
  *
  * @param {Object}   state    The store state.
  * @param {string}   clientId The clientId of the block to start traversing from.
  * @param {Function} callback Function to execute for each block encountered during traversal.
  *                            The callback receives the current block as its argument.
  */
-function recurseInnerBlocks( state, clientId, callback ) {
+function traverseBlockTree( state, clientId, callback ) {
 	const parentTree = getBlockTreeBlock( state, clientId );
-	if ( ! parentTree?.innerBlocks?.length ) {
+	if ( ! parentTree ) {
 		return;
 	}
 
+	callback( parentTree );
+
 	for ( const block of parentTree?.innerBlocks ) {
-		callback( block );
-		recurseInnerBlocks( state, block.clientId, callback );
+		traverseBlockTree( state, block.clientId, callback );
 	}
 }
 
@@ -2234,7 +2244,7 @@ function hasBindings( block ) {
  *
  * @return {string|undefined} The determined editing mode for the block: 'contentOnly', 'disabled', or undefined.
  */
-function getBlockEditingModesForBlock(
+function getBlockEditingModeForBlock(
 	state,
 	clientId,
 	{
@@ -2384,24 +2394,8 @@ function getDerivedBlockEditingModesForTree( state, treeRootClientId = '' ) {
 			state.blocks.byClientId?.get( clientId )?.name === 'core/block'
 	);
 
-	const blockEditingMode = getBlockEditingModesForBlock(
-		state,
-		treeRootClientId,
-		{
-			sectionRootClientId,
-			sectionClientIds,
-			syncedPatternClientIds,
-			isZoomedOut,
-			isNavMode,
-		}
-	);
-
-	if ( blockEditingMode ) {
-		derivedBlockEditingModes.set( treeRootClientId, blockEditingMode );
-	}
-
-	recurseInnerBlocks( state, treeRootClientId, ( block ) => {
-		const _blockEditingMode = getBlockEditingModesForBlock(
+	traverseBlockTree( state, treeRootClientId, ( block ) => {
+		const _blockEditingMode = getBlockEditingModeForBlock(
 			state,
 			block.clientId,
 			{
@@ -2419,6 +2413,80 @@ function getDerivedBlockEditingModesForTree( state, treeRootClientId = '' ) {
 	} );
 
 	return derivedBlockEditingModes;
+}
+
+/**
+ * Updates the derived block editing modes based on added and removed blocks.
+ *
+ * This function handles the updating of block editing modes when blocks are added,
+ * removed, or moved within the editor.
+ *
+ * It only returns a value when modifications are made to the block editing modes.
+ *
+ * @param {Object} options                    The options for updating derived block editing modes.
+ * @param {Object} options.prevState          The previous state object.
+ * @param {Object} options.nextState          The next state object.
+ * @param {Array}  [options.addedBlocks]      An array of blocks that were added.
+ * @param {Array}  [options.removedClientIds] An array of client IDs of blocks that were removed.
+ *
+ * @return {Map|undefined} The updated derived block editing modes, or undefined if no changes were made.
+ */
+function updateDerivedBlockEditingModes( {
+	prevState,
+	nextState,
+	addedBlocks,
+	removedClientIds,
+} ) {
+	const prevDerivedBlockEditingModes = prevState.derivedBlockEditingModes;
+	let nextDerivedBlockEditingModes;
+
+	// Perform removals before additions to handle cases like the `MOVE_BLOCKS_TO_POSITION` action.
+	// That action removes a set of clientIds, but adds the same blocks back in a different location.
+	// If removals were performed after additions, those moved clientIds would be removed incorrectly.
+	removedClientIds?.forEach( ( clientId ) => {
+		// The actions only receive parent block IDs for removal.
+		// Recurse through the block tree to ensure all blocks are removed.
+		// Specifically use the previous state, before the blocks were removed.
+		traverseBlockTree( prevState, clientId, ( block ) => {
+			if ( prevDerivedBlockEditingModes.has( block.clientId ) ) {
+				if ( ! nextDerivedBlockEditingModes ) {
+					nextDerivedBlockEditingModes = new Map(
+						prevDerivedBlockEditingModes
+					);
+				}
+				nextDerivedBlockEditingModes.delete( block.clientId );
+			}
+		} );
+	} );
+
+	addedBlocks?.forEach( ( addedBlock ) => {
+		traverseBlockTree( nextState, addedBlock.clientId, ( block ) => {
+			const updates = getDerivedBlockEditingModesForTree(
+				nextState,
+				block.clientId
+			);
+
+			if ( updates.size ) {
+				if ( ! nextDerivedBlockEditingModes ) {
+					nextDerivedBlockEditingModes = new Map( [
+						...( prevDerivedBlockEditingModes?.size
+							? prevDerivedBlockEditingModes
+							: [] ),
+						...updates,
+					] );
+				} else {
+					nextDerivedBlockEditingModes = new Map( [
+						...( nextDerivedBlockEditingModes?.size
+							? nextDerivedBlockEditingModes
+							: [] ),
+						...updates,
+					] );
+				}
+			}
+		} );
+	} );
+
+	return nextDerivedBlockEditingModes;
 }
 
 /**
@@ -2445,21 +2513,13 @@ export const withDerivedBlockEditingModes =
 		}
 
 		switch ( action.type ) {
-			case 'REMOVE_BLOCKS':
-				const lastDerivedBlockEditingModes =
-					state.derivedBlockEditingModes;
-				let nextDerivedBlockEditingModes;
-
-				action.clientIds.forEach( ( clientId ) => {
-					if ( lastDerivedBlockEditingModes.has( clientId ) ) {
-						if ( ! nextDerivedBlockEditingModes ) {
-							nextDerivedBlockEditingModes = new Map(
-								lastDerivedBlockEditingModes
-							);
-						}
-						nextDerivedBlockEditingModes.delete( clientId );
-					}
-				} );
+			case 'REMOVE_BLOCKS': {
+				const nextDerivedBlockEditingModes =
+					updateDerivedBlockEditingModes( {
+						prevState: state,
+						nextState,
+						removedClientIds: action.clientIds,
+					} );
 
 				if ( nextDerivedBlockEditingModes ) {
 					return {
@@ -2468,12 +2528,85 @@ export const withDerivedBlockEditingModes =
 					};
 				}
 				break;
-			case 'INSERT_BLOCKS':
+			}
 			case 'RECEIVE_BLOCKS':
-			case 'REPLACE_BLOCKS':
-			case 'REPLACE_INNER_BLOCKS':
-			case 'MOVE_BLOCKS_TO_POSITION':
-			case 'UPDATE_SETTINGS':
+			case 'INSERT_BLOCKS': {
+				const nextDerivedBlockEditingModes =
+					updateDerivedBlockEditingModes( {
+						prevState: state,
+						nextState,
+						addedBlocks: action.blocks,
+					} );
+
+				if ( nextDerivedBlockEditingModes ) {
+					return {
+						...nextState,
+						derivedBlockEditingModes: nextDerivedBlockEditingModes,
+					};
+				}
+				break;
+			}
+			case 'REPLACE_BLOCKS': {
+				const nextDerivedBlockEditingModes =
+					updateDerivedBlockEditingModes( {
+						prevState: state,
+						nextState,
+						addedBlocks: action.blocks,
+						removedClientIds: action.clientIds,
+					} );
+
+				if ( nextDerivedBlockEditingModes ) {
+					return {
+						...nextState,
+						derivedBlockEditingModes: nextDerivedBlockEditingModes,
+					};
+				}
+				break;
+			}
+			case 'REPLACE_INNER_BLOCKS': {
+				const nextDerivedBlockEditingModes =
+					updateDerivedBlockEditingModes( {
+						prevState: state,
+						nextState,
+						addedBlocks: action.blocks,
+						// Get the clientIds of the blocks that are being replaced
+						// from the old state, before they were removed.
+						removedClientIds: state.blocks.order.get(
+							action.rootClientId
+						),
+					} );
+
+				if ( nextDerivedBlockEditingModes ) {
+					return {
+						...nextState,
+						derivedBlockEditingModes: nextDerivedBlockEditingModes,
+					};
+				}
+				break;
+			}
+			case 'MOVE_BLOCKS_TO_POSITION': {
+				const nextDerivedBlockEditingModes =
+					updateDerivedBlockEditingModes( {
+						prevState: state,
+						nextState,
+						addedBlocks: action.clientIds.map( ( clientId ) => {
+							return nextState.blocks.byClientId.get( clientId );
+						} ),
+						// Get the clientIds of the blocks that are being replaced
+						// from the old state, before they were removed.
+						removedClientIds: action.clientIds,
+					} );
+
+				if ( nextDerivedBlockEditingModes ) {
+					return {
+						...nextState,
+						derivedBlockEditingModes: nextDerivedBlockEditingModes,
+					};
+				}
+				break;
+			}
+			case 'UPDATE_SETTINGS': {
+				// Recompute the entire tree if the section root changes.
 				if (
 					state.settings[ sectionRootClientIdKey ] !==
 					nextState.settings[ sectionRootClientIdKey ]
@@ -2485,10 +2618,13 @@ export const withDerivedBlockEditingModes =
 					};
 				}
 				break;
+			}
 			case 'RESET_BLOCKS':
 			case 'SET_EDITOR_MODE':
 			case 'RESET_ZOOM_LEVEL':
 			case 'SET_ZOOM_LEVEL': {
+				// Recompute the entire tree if the editor mode or zoom level changes,
+				// or if all the blocks are reset.
 				return {
 					...nextState,
 					derivedBlockEditingModes:
