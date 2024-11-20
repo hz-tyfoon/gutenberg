@@ -393,6 +393,7 @@ export function useScaleCanvas( {
 		};
 	}, [
 		onZoomOutTransitionEnd,
+		prefersReducedMotion,
 		isAutoScaled,
 		scaleValue,
 		frameSize,
