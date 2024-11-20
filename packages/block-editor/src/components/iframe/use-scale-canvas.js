@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { useEffect, useRef } from '@wordpress/element';
+import { useEffect, useRef, useCallback } from '@wordpress/element';
 import { useReducedMotion, useResizeObserver } from '@wordpress/compose';
 
 function calculateScale( {
@@ -13,6 +13,64 @@ function calculateScale( {
 	return (
 		( Math.min( containerWidth, maxContainerWidth ) - frameSize * 2 ) /
 		scaleContainerWidth
+	);
+}
+
+/**
+ * Compute the next scrollTop position after scaling the iframe content.
+ *
+ * @param {number} scrollTop      Current scrollTop position of the iframe
+ * @param {number} scrollHeight   Scaled height of the current iframe content.
+ * @param {Object} transitionFrom The starting point of the transition
+ * @param {Object} transitionTo   The ending state of the transition
+ * @return {number} The next scrollTop position after scaling the iframe content.
+ */
+function computeScrollTopNext(
+	scrollTop,
+	scrollHeight,
+	transitionFrom,
+	transitionTo
+) {
+	const {
+		clientHeight: prevClientHeight,
+		frameSize: prevFrameSize,
+		scaleValue: prevScale,
+	} = transitionFrom;
+	const { clientHeight, frameSize, scaleValue } = transitionTo;
+	// Step 0: Start with the current scrollTop.
+	let scrollTopNext = scrollTop;
+	// Step 1: Undo the effects of the previous scale and frame around the
+	// midpoint of the visible area.
+	scrollTopNext =
+		( scrollTopNext + prevClientHeight / 2 - prevFrameSize ) / prevScale -
+		prevClientHeight / 2;
+
+	// Step 2: Apply the new scale and frame around the midpoint of the
+	// visible area.
+	scrollTopNext =
+		( scrollTopNext + clientHeight / 2 ) * scaleValue +
+		frameSize -
+		clientHeight / 2;
+
+	// Step 3: Handle an edge case so that you scroll to the top of the
+	// iframe if the top of the iframe content is visible in the container.
+	// The same edge case for the bottom is skipped because changing content
+	// makes calculating it impossible.
+	scrollTopNext = scrollTop <= prevFrameSize ? 0 : scrollTopNext;
+
+	// This is the scrollTop value if you are scrolled to the bottom of the
+	// iframe. We can't just let the browser handle it because we need to
+	// animate the scaling.
+	const maxScrollTop =
+		scrollHeight * ( scaleValue / prevScale ) +
+		frameSize * 2 -
+		clientHeight;
+
+	// Step 4: Clamp the scrollTopNext between the minimum and maximum
+	// possible scrollTop positions. Round the value to avoid subpixel
+	// truncation by the browser which sometimes causes a 1px error.
+	return Math.round(
+		Math.min( Math.max( 0, scrollTopNext ), Math.max( 0, maxScrollTop ) )
 	);
 }
 
@@ -84,6 +142,37 @@ export function useScaleCanvas( {
 		clientHeight: 0,
 		scrollTopNext: 0,
 	} );
+
+	const onZoomOutTransitionEnd = useCallback( () => {
+		startAnimationRef.current = false;
+		animationRef.current = null;
+
+		// Add our final scale and frame size now that the animation is done.
+		iframeDocument.documentElement.style.setProperty(
+			'--wp-block-editor-iframe-zoom-out-scale',
+			transitionTo.current.scaleValue
+		);
+		iframeDocument.documentElement.style.setProperty(
+			'--wp-block-editor-iframe-zoom-out-frame-size',
+			`${ transitionTo.current.frameSize }px`
+		);
+
+		iframeDocument.documentElement.classList.remove( 'zoom-out-animation' );
+
+		// Set the final scroll position that was just animated to.
+		iframeDocument.documentElement.scrollTop =
+			transitionTo.current.scrollTopNext;
+
+		iframeDocument.documentElement.style.removeProperty(
+			'--wp-block-editor-iframe-zoom-out-scroll-top'
+		);
+		iframeDocument.documentElement.style.removeProperty(
+			'--wp-block-editor-iframe-zoom-out-scroll-top-next'
+		);
+
+		// Update previous values.
+		transitionFrom.current = transitionTo.current;
+	}, [ iframeDocument ] );
 
 	useEffect( () => {
 		if ( ! iframeDocument ) {
@@ -187,16 +276,13 @@ export function useScaleCanvas( {
 			// Only start a new animation if the scale has changed. Otherwise we're just updating the CSS variables
 			// or reversing the animation.
 			else if ( scaleValue !== prevScale ) {
-				// Scaled height of the current iframe content.
-				const scrollHeight =
-					iframeDocument.documentElement.scrollHeight;
-
 				// Unscaled size of the previous padding around the iframe content.
 				const prevFrameSize = transitionFrom.current.frameSize;
 
 				// Unscaled height of the previous iframe container.
 				const prevClientHeight =
 					transitionFrom.current.clientHeight ?? clientHeight;
+
 				// We can't trust the set value from contentHeight, as it was measured
 				// before the zoom out mode was changed. After zoom out mode is changed,
 				// appenders may appear or disappear, so we need to get the height from
@@ -206,45 +292,28 @@ export function useScaleCanvas( {
 				// is toggled, as the bottom bar about selecting the template is
 				// added/removed when toggling zoom out mode.
 				const scrollTop = iframeDocument.documentElement.scrollTop;
-				// Step 0: Start with the current scrollTop.
-				let scrollTopNext = scrollTop;
-				// Step 1: Undo the effects of the previous scale and frame around the
-				// midpoint of the visible area.
-				scrollTopNext =
-					( scrollTopNext + prevClientHeight / 2 - prevFrameSize ) /
-						prevScale -
-					prevClientHeight / 2;
 
-				// Step 2: Apply the new scale and frame around the midpoint of the
-				// visible area.
-				scrollTopNext =
-					( scrollTopNext + clientHeight / 2 ) * scaleValue +
-					frameSize -
-					clientHeight / 2;
+				transitionFrom.current = {
+					scaleValue: prevScale,
+					frameSize: prevFrameSize,
+					clientHeight: prevClientHeight,
+					scrollTopNext: scrollTop,
+				};
 
-				// Step 3: Handle an edge case so that you scroll to the top of the
-				// iframe if the top of the iframe content is visible in the container.
-				// The same edge case for the bottom is skipped because changing content
-				// makes calculating it impossible.
-				scrollTopNext = scrollTop <= prevFrameSize ? 0 : scrollTopNext;
+				transitionTo.current = {
+					scaleValue,
+					frameSize,
+					clientHeight,
+				};
 
-				// This is the scrollTop value if you are scrolled to the bottom of the
-				// iframe. We can't just let the browser handle it because we need to
-				// animate the scaling.
-				const maxScrollTop =
-					scrollHeight * ( scaleValue / prevScale ) +
-					frameSize * 2 -
-					clientHeight;
-
-				// Step 4: Clamp the scrollTopNext between the minimum and maximum
-				// possible scrollTop positions. Round the value to avoid subpixel
-				// truncation by the browser which sometimes causes a 1px error.
-				scrollTopNext = Math.round(
-					Math.min(
-						Math.max( 0, scrollTopNext ),
-						Math.max( 0, maxScrollTop )
-					)
+				const scrollTopNext = computeScrollTopNext(
+					scrollTop,
+					iframeDocument.documentElement.scrollHeight,
+					transitionFrom.current,
+					transitionTo.current
 				);
+
+				transitionTo.current.scrollTopNext = scrollTopNext;
 
 				iframeDocument.documentElement.style.setProperty(
 					'--wp-block-editor-iframe-zoom-out-scroll-top',
@@ -280,55 +349,6 @@ export function useScaleCanvas( {
 					}
 				);
 
-				transitionFrom.current = {
-					scaleValue: prevScale,
-					frameSize: prevFrameSize,
-					clientHeight: prevClientHeight,
-					scrollTopNext: scrollTop,
-				};
-
-				transitionTo.current = {
-					scaleValue,
-					frameSize,
-					clientHeight,
-					scrollTopNext,
-				};
-
-				// We need to define this outside of the initial animation, as it may end up
-				// getting reversed.
-				const onZoomOutTransitionEnd = () => {
-					startAnimationRef.current = false;
-					animationRef.current = null;
-
-					// Add our final scale and frame size now that the animation is done.
-					iframeDocument.documentElement.style.setProperty(
-						'--wp-block-editor-iframe-zoom-out-scale',
-						transitionTo.current.scaleValue
-					);
-					iframeDocument.documentElement.style.setProperty(
-						'--wp-block-editor-iframe-zoom-out-frame-size',
-						`${ transitionTo.current.frameSize }px`
-					);
-
-					iframeDocument.documentElement.classList.remove(
-						'zoom-out-animation'
-					);
-
-					// Set the final scroll position that was just animated to.
-					iframeDocument.documentElement.scrollTop =
-						transitionTo.current.scrollTopNext;
-
-					iframeDocument.documentElement.style.removeProperty(
-						'--wp-block-editor-iframe-zoom-out-scroll-top'
-					);
-					iframeDocument.documentElement.style.removeProperty(
-						'--wp-block-editor-iframe-zoom-out-scroll-top-next'
-					);
-
-					// Update previous values.
-					transitionFrom.current = transitionTo.current;
-				};
-
 				if ( prefersReducedMotion ) {
 					onZoomOutTransitionEnd();
 				} else {
@@ -358,6 +378,7 @@ export function useScaleCanvas( {
 			);
 		};
 	}, [
+		onZoomOutTransitionEnd,
 		isAutoScaled,
 		scaleValue,
 		frameSize,
