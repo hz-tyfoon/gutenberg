@@ -75,6 +75,22 @@ export function useScaleCanvas( {
 	const prevFrameSizeRef = useRef( frameSize );
 	const prevClientHeightRef = useRef( /* Initialized in the useEffect. */ );
 	const prevScrollTop = useRef( 0 );
+	const scrollTopNextRef = useRef( 0 );
+	const clientHeightRef = useRef( 0 );
+
+	const transitionFrom = useRef( {
+		scaleValue,
+		frameSize,
+		clientHeight: 0,
+		scrollTopNext: 0,
+	} );
+
+	const transitionTo = useRef( {
+		scaleValue,
+		frameSize,
+		clientHeight: 0,
+		scrollTopNext: 0,
+	} );
 
 	useEffect( () => {
 		if ( ! iframeDocument ) {
@@ -130,7 +146,8 @@ export function useScaleCanvas( {
 			`${ contentHeight }px`
 		);
 
-		let clientHeight = iframeDocument.documentElement.clientHeight;
+		const clientHeight = iframeDocument.documentElement.clientHeight;
+		clientHeightRef.current = clientHeight;
 		iframeDocument.documentElement.style.setProperty(
 			'--wp-block-editor-iframe-zoom-out-inner-height',
 			`${ clientHeight }px`
@@ -145,10 +162,6 @@ export function useScaleCanvas( {
 			`${ scaleContainerWidth }px`
 		);
 
-		let onZoomOutTransitionEnd = () => {};
-
-		let scrollTopNext;
-
 		/**
 		 * Handle the zoom out animation:
 		 * - get the current scroll
@@ -158,7 +171,6 @@ export function useScaleCanvas( {
 		 * - animate the scale and padding to the new scale and frame size
 		 * - after the animation is complete, remove the fixed positioning
 		 *   and set the scroll position that keeps everything centered
-		 *
 		 */
 		if ( startAnimationRef.current ) {
 			// Don't allow a new transition to start again unless it was started by the zoom out mode changing.
@@ -170,9 +182,12 @@ export function useScaleCanvas( {
 				//   Otherwise, it will always report as 0 because of the fixed positioning.
 				//   This can be used for the `scrollTopNext` value.
 				// - The previous client height, as it's used in the finishing state of the animation.
-				scrollTopNext = prevScrollTop.current;
-				clientHeight = prevClientHeightRef.current;
 				animationRef.current.reverse();
+				// Swap the transition values so that we can reverse the animation.
+				const tempTransitionFrom = transitionFrom.current;
+				const tempTransitionTo = transitionTo.current;
+				transitionFrom.current = tempTransitionTo;
+				transitionTo.current = tempTransitionFrom;
 			}
 
 			// Only start a new animation if the scale has changed. Otherwise we're just updating the CSS variables
@@ -190,7 +205,7 @@ export function useScaleCanvas( {
 
 				// Unscaled height of the previous iframe container.
 				const prevClientHeight =
-					prevClientHeightRef.current ?? clientHeight;
+					prevClientHeightRef.current ?? clientHeightRef.current;
 				// We can't trust the set value from contentHeight, as it was measured
 				// before the zoom out mode was changed. After zoom out mode is changed,
 				// appenders may appear or disappear, so we need to get the height from
@@ -202,7 +217,7 @@ export function useScaleCanvas( {
 				const scrollTop = iframeDocument.documentElement.scrollTop;
 				prevScrollTop.current = scrollTop;
 				// Step 0: Start with the current scrollTop.
-				scrollTopNext = scrollTop;
+				let scrollTopNext = scrollTop;
 				// Step 1: Undo the effects of the previous scale and frame around the
 				// midpoint of the visible area.
 				scrollTopNext =
@@ -240,6 +255,7 @@ export function useScaleCanvas( {
 						Math.max( 0, maxScrollTop )
 					)
 				);
+				scrollTopNextRef.current = scrollTopNext;
 
 				iframeDocument.documentElement.style.setProperty(
 					'--wp-block-editor-iframe-zoom-out-scroll-top',
@@ -274,22 +290,35 @@ export function useScaleCanvas( {
 						duration: 400,
 					}
 				);
-			}
 
-			if ( animationRef.current ) {
+				transitionFrom.current = {
+					scaleValue: prevScale,
+					frameSize: prevFrameSize,
+					clientHeight: prevClientHeight,
+					scrollTopNext: scrollTop,
+				};
+
+				transitionTo.current = {
+					scaleValue,
+					frameSize,
+					clientHeight,
+					scrollTopNext,
+				};
+
 				// We need to define this outside of the initial animation, as it may end up
 				// getting reversed.
-				onZoomOutTransitionEnd = () => {
+				const onZoomOutTransitionEnd = () => {
 					startAnimationRef.current = false;
 					animationRef.current = null;
+
 					// Add our final scale and frame size now that the animation is done.
 					iframeDocument.documentElement.style.setProperty(
 						'--wp-block-editor-iframe-zoom-out-scale',
-						scaleValue
+						transitionTo.current.scaleValue
 					);
 					iframeDocument.documentElement.style.setProperty(
 						'--wp-block-editor-iframe-zoom-out-frame-size',
-						`${ frameSize }px`
+						`${ transitionTo.current.frameSize }px`
 					);
 
 					iframeDocument.documentElement.classList.remove(
@@ -297,12 +326,14 @@ export function useScaleCanvas( {
 					);
 
 					// Update previous values.
-					prevClientHeightRef.current = clientHeight;
-					prevFrameSizeRef.current = frameSize;
-					prevScaleRef.current = scaleValue;
+					prevClientHeightRef.current =
+						transitionTo.current.clientHeight;
+					prevFrameSizeRef.current = transitionTo.current.frameSize;
+					prevScaleRef.current = transitionTo.current.scaleValue;
 
 					// Set the final scroll position that was just animated to.
-					iframeDocument.documentElement.scrollTop = scrollTopNext;
+					iframeDocument.documentElement.scrollTop =
+						transitionTo.current.scrollTopNext;
 
 					iframeDocument.documentElement.style.removeProperty(
 						'--wp-block-editor-iframe-zoom-out-scroll-top'
