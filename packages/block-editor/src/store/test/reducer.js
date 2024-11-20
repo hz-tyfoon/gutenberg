@@ -4046,7 +4046,52 @@ describe( 'state', () => {
 				'group-1': 'contentOnly', // Section root.
 				'group-2': 'contentOnly', // Section.
 				'paragraph-1': 'disabled', // Content block in section.
-				'pattern-1': 'disabled',
+				'pattern-1': 'disabled', // All other blocks outside section.
+				'paragraph-2': 'disabled',
+				'paragraph-3': 'disabled',
+				'pattern-2': 'disabled',
+				'paragraph-4': 'disabled',
+			};
+
+			Object.entries( expectedBlockEditingModes ).forEach(
+				( [ blockId, expectedMode ] ) => {
+					expect( derivedBlockEditingModes.get( blockId ) ).toBe(
+						expectedMode
+					);
+				}
+			);
+		} );
+		it( 'handles changes to the section root in navigation mode', () => {
+			select.mockImplementation( ( storeName ) => {
+				if ( storeName === preferencesStore ) {
+					return {
+						get: jest.fn( () => 'navigation' ),
+					};
+				}
+				return select( storeName );
+			} );
+
+			const action = {
+				type: 'UPDATE_SETTINGS',
+			};
+
+			function reducer() {
+				return {
+					...initialState,
+					settings: { [ sectionRootClientIdKey ]: 'group-1' },
+				};
+			}
+
+			const { derivedBlockEditingModes } = withDerivedBlockEditingModes(
+				reducer
+			)( initialState, action );
+
+			const expectedBlockEditingModes = {
+				'': 'disabled',
+				'group-1': 'contentOnly', // Section root.
+				'group-2': 'contentOnly', // Section.
+				'paragraph-1': 'contentOnly', // Content block in section.
+				'pattern-1': 'disabled', // All other blocks outside section.
 				'paragraph-2': 'disabled',
 				'paragraph-3': 'disabled',
 				'pattern-2': 'disabled',

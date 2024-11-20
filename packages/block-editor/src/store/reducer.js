@@ -2205,6 +2205,23 @@ function hasParentWithName( state, clientId, name ) {
 	return false;
 }
 
+function isInSection( state, clientId ) {
+	const sectionRootClientId = state.settings?.[ sectionRootClientIdKey ];
+	const sectionClientIds = state.blocks.order.get( sectionRootClientId );
+	if ( ! sectionClientIds?.length ) {
+		return false;
+	}
+
+	let parent = state.blocks.parents.get( clientId );
+	while ( parent ) {
+		if ( sectionClientIds.includes( parent ) ) {
+			return true;
+		}
+		parent = state.blocks.parents.get( parent );
+	}
+	return false;
+}
+
 /**
  * Checks if a block has any bindings in its metadata attributes.
  *
@@ -2371,21 +2388,34 @@ export const withDerivedBlockEditingModes =
 							);
 						}
 						recurseInnerBlocks( nextState, clientId, ( block ) => {
-							// If an inner block has bindings, it should be set to contentOnly.
-							// Else it should be set to disabled.
-							// Also check for zoomed out - content shouldn't be editable when
-							// zoomed out, but to be rigorous, still disable inner blocks.
-							if ( ! isZoomedOut && hasBindings( block ) ) {
+							// In zoomed out mode users can't edit content.
+							// In navigation mode users can't edit content outside sections.
+							if (
+								isZoomedOut ||
+								( isNavMode &&
+									! isInSection( nextState, block.clientId ) )
+							) {
+								// This will have already been set to disabled by the
+								// code that handles zoomed out/nav mode, so stop recursion.
+								return false;
+							}
+
+							// If the block has bindings, it should be set to contentOnly.
+							if ( hasBindings( block ) ) {
 								derivedBlockEditingModes.set(
 									block.clientId,
 									'contentOnly'
 								);
-							} else {
-								derivedBlockEditingModes.set(
-									block.clientId,
-									'disabled'
-								);
+								return;
 							}
+
+							// Set any other pattern content to disabled.
+							// Users have to specifically edit the pattern source
+							// to change this content.
+							derivedBlockEditingModes.set(
+								block.clientId,
+								'disabled'
+							);
 						} );
 					}
 				}
