@@ -2178,48 +2178,28 @@ function recurseInnerBlocks( state, clientId, callback ) {
 	}
 
 	for ( const block of parentTree?.innerBlocks ) {
-		const continueRecursion = callback( block );
-		if ( continueRecursion !== false ) {
-			recurseInnerBlocks( state, block.clientId, callback );
-		}
+		callback( block );
+		recurseInnerBlocks( state, block.clientId, callback );
 	}
 }
 
 /**
- * Checks if a block has a parent block with a specific name by traversing up the block hierarchy.
+ * Checks if a block has a parent in a list of client IDs, and if so returns the client ID of the parent.
  *
- * @param {Object} state    The current state object.
- * @param {string} clientId The client ID of the block to check.
- * @param {string} name     The block name to search for in parent blocks.
+ * @param {Object} state     The current state object.
+ * @param {string} clientId  The client ID of the block to search the parents of.
+ * @param {Array}  clientIds The client IDs of the blocks to check.
  *
- * @return {boolean} True if a parent block with the specified name is found, false otherwise.
+ * @return {string|undefined} The client ID of the parent block if found, undefined otherwise.
  */
-function hasParentWithName( state, clientId, name ) {
+function findParentInClientIdsList( state, clientId, clientIds ) {
 	let parent = state.blocks.parents.get( clientId );
 	while ( parent ) {
-		if ( state.blocks.byClientId.get( parent ).name === name ) {
-			return true;
+		if ( clientIds.includes( parent ) ) {
+			return parent;
 		}
 		parent = state.blocks.parents.get( parent );
 	}
-	return false;
-}
-
-function isInSection( state, clientId ) {
-	const sectionRootClientId = state.settings?.[ sectionRootClientIdKey ];
-	const sectionClientIds = state.blocks.order.get( sectionRootClientId );
-	if ( ! sectionClientIds?.length ) {
-		return false;
-	}
-
-	let parent = state.blocks.parents.get( clientId );
-	while ( parent ) {
-		if ( sectionClientIds.includes( parent ) ) {
-			return true;
-		}
-		parent = state.blocks.parents.get( parent );
-	}
-	return false;
 }
 
 /**
@@ -2233,6 +2213,212 @@ function hasBindings( block ) {
 		block?.attributes?.metadata?.bindings &&
 		Object.keys( block?.attributes?.metadata?.bindings ).length
 	);
+}
+
+/**
+ * Determines the editing mode for a given block based on various factors.
+ *
+ * This function evaluates the editing mode of a block considering the following:
+ * - Whether the editor is in zoomed out or navigation mode.
+ * - The block's relationship to sections and synced patterns.
+ * - The presence of bindings in the block's attributes.
+ *
+ * @param {Object}  state                          The current state object.
+ * @param {string}  clientId                       The client ID of the block to evaluate.
+ * @param {Object}  options                        Additional options for determining the editing mode.
+ * @param {string}  options.sectionRootClientId    The client ID of the section root block.
+ * @param {Array}   options.sectionClientIds       An array of client IDs for section blocks.
+ * @param {Array}   options.syncedPatternClientIds An array of client IDs for synced pattern blocks.
+ * @param {boolean} options.isZoomedOut            Whether the editor is in zoomed out mode.
+ * @param {boolean} options.isNavMode              Whether the editor is in navigation mode.
+ *
+ * @return {string|undefined} The determined editing mode for the block: 'contentOnly', 'disabled', or undefined.
+ */
+function getBlockEditingModesForBlock(
+	state,
+	clientId,
+	{
+		sectionRootClientId,
+		sectionClientIds,
+		syncedPatternClientIds,
+		isZoomedOut,
+		isNavMode,
+	}
+) {
+	if ( isZoomedOut || isNavMode ) {
+		// If the root block is the section root set its editing mode to contentOnly.
+		if (
+			clientId === sectionRootClientId ||
+			sectionClientIds.includes( clientId )
+		) {
+			return 'contentOnly';
+		}
+
+		// If zoomed out, all blocks that aren't sections or the section root are
+		// disabled.
+		// If the tree root is not in a section, set its editing mode to disabled.
+		if (
+			isZoomedOut ||
+			! findParentInClientIdsList( state, clientId, sectionClientIds )
+		) {
+			return 'disabled';
+		}
+
+		// Next handle content blocks, which are either blocks with role: content
+		// or blocks that are inside synced patterns with bindings.
+		const block = state.blocks.byClientId.get( clientId );
+
+		if ( syncedPatternClientIds.length ) {
+			const parentPatternClientId = findParentInClientIdsList(
+				state,
+				clientId,
+				syncedPatternClientIds
+			);
+
+			// There's some special handling for synced patterns, even in nav mode.
+			if ( parentPatternClientId ) {
+				// This is a pattern nested in another pattern, it should be disabled.
+				if (
+					findParentInClientIdsList(
+						state,
+						parentPatternClientId,
+						syncedPatternClientIds
+					)
+				) {
+					return 'disabled';
+				}
+
+				if ( hasBindings( block ) ) {
+					return 'contentOnly';
+				}
+
+				// Synced pattern content without a binding isn't editable
+				// from the instance, the user has to edit the pattern source,
+				// so return 'disabled'.
+				return 'disabled';
+			}
+		}
+
+		if ( block?.name && isContentBlock( block.name ) ) {
+			return 'contentOnly';
+		}
+
+		return 'disabled';
+	}
+
+	if ( syncedPatternClientIds.length ) {
+		// Synced pattern blocks (core/block).
+		if ( syncedPatternClientIds.includes( clientId ) ) {
+			// This is a pattern nested in another pattern, it should be disabled.
+			if (
+				findParentInClientIdsList(
+					state,
+					clientId,
+					syncedPatternClientIds
+				)
+			) {
+				return 'disabled';
+			}
+
+			return 'contentOnly';
+		}
+
+		// Inner blocks of synced patterns.
+		const parentPatternClientId = findParentInClientIdsList(
+			state,
+			clientId,
+			syncedPatternClientIds
+		);
+		if ( parentPatternClientId ) {
+			// This is a pattern nested in another pattern, it should be disabled.
+			if (
+				findParentInClientIdsList(
+					state,
+					parentPatternClientId,
+					syncedPatternClientIds
+				)
+			) {
+				return 'disabled';
+			}
+
+			const block = state.blocks.byClientId.get( clientId );
+			if ( hasBindings( block ) ) {
+				return 'contentOnly';
+			}
+
+			// Synced pattern content without a binding isn't editable
+			// from the instance, the user has to edit the pattern source,
+			// so return 'disabled'.
+			return 'disabled';
+		}
+	}
+}
+
+/**
+ * Computes and returns derived block editing modes for a given block tree.
+ *
+ * This function calculates the editing modes for each block in the tree, taking into account
+ * various factors such as zoom level, navigation mode, sections, and synced patterns.
+ *
+ * @param {Object} state            The current state object.
+ * @param {string} treeRootClientId The client ID of the root block for the tree. Defaults to an empty string.
+ *
+ * @return {Map} A Map containing the derived block editing modes, keyed by block client ID.
+ */
+function getDerivedBlockEditingModesForTree( state, treeRootClientId = '' ) {
+	const isZoomedOut =
+		state?.zoomLevel < 100 || state?.zoomLevel === 'auto-scaled';
+	const isNavMode =
+		select( preferencesStore )?.get( 'core', 'editorTool' ) ===
+		'navigation';
+	const derivedBlockEditingModes = new Map();
+
+	// When there are sections, the majority of blocks are disabled,
+	// so the default block editing mode is set to disabled.
+	const sectionRootClientId = state.settings?.[ sectionRootClientIdKey ];
+	const sectionClientIds = state.blocks.order.get( sectionRootClientId );
+	const syncedPatternClientIds = Object.keys(
+		state.blocks.controlledInnerBlocks
+	).filter(
+		( clientId ) =>
+			state.blocks.byClientId?.get( clientId )?.name === 'core/block'
+	);
+
+	const blockEditingMode = getBlockEditingModesForBlock(
+		state,
+		treeRootClientId,
+		{
+			sectionRootClientId,
+			sectionClientIds,
+			syncedPatternClientIds,
+			isZoomedOut,
+			isNavMode,
+		}
+	);
+
+	if ( blockEditingMode ) {
+		derivedBlockEditingModes.set( treeRootClientId, blockEditingMode );
+	}
+
+	recurseInnerBlocks( state, treeRootClientId, ( block ) => {
+		const _blockEditingMode = getBlockEditingModesForBlock(
+			state,
+			block.clientId,
+			{
+				sectionRootClientId,
+				sectionClientIds,
+				syncedPatternClientIds,
+				isZoomedOut,
+				isNavMode,
+			}
+		);
+
+		if ( _blockEditingMode ) {
+			derivedBlockEditingModes.set( block.clientId, _blockEditingMode );
+		}
+	} );
+
+	return derivedBlockEditingModes;
 }
 
 /**
@@ -2258,170 +2444,55 @@ export const withDerivedBlockEditingModes =
 			return state;
 		}
 
-		const isZoomedOut =
-			nextState?.zoomLevel < 100 ||
-			nextState?.zoomLevel === 'auto-scaled';
-		const isNavMode =
-			select( preferencesStore )?.get( 'core', 'editorTool' ) ===
-			'navigation';
-
 		switch ( action.type ) {
-			case 'RESET_BLOCKS':
+			case 'REMOVE_BLOCKS':
+				const lastDerivedBlockEditingModes =
+					state.derivedBlockEditingModes;
+				let nextDerivedBlockEditingModes;
+
+				action.clientIds.forEach( ( clientId ) => {
+					if ( lastDerivedBlockEditingModes.has( clientId ) ) {
+						if ( ! nextDerivedBlockEditingModes ) {
+							nextDerivedBlockEditingModes = new Map(
+								lastDerivedBlockEditingModes
+							);
+						}
+						nextDerivedBlockEditingModes.delete( clientId );
+					}
+				} );
+
+				if ( nextDerivedBlockEditingModes ) {
+					return {
+						...nextState,
+						derivedBlockEditingModes: nextDerivedBlockEditingModes,
+					};
+				}
+				break;
 			case 'INSERT_BLOCKS':
 			case 'RECEIVE_BLOCKS':
 			case 'REPLACE_BLOCKS':
 			case 'REPLACE_INNER_BLOCKS':
-			case 'REMOVE_BLOCKS':
 			case 'MOVE_BLOCKS_TO_POSITION':
 			case 'UPDATE_SETTINGS':
+				if (
+					state.settings[ sectionRootClientIdKey ] !==
+					nextState.settings[ sectionRootClientIdKey ]
+				) {
+					return {
+						...nextState,
+						derivedBlockEditingModes:
+							getDerivedBlockEditingModesForTree( nextState ),
+					};
+				}
+				break;
+			case 'RESET_BLOCKS':
 			case 'SET_EDITOR_MODE':
 			case 'RESET_ZOOM_LEVEL':
 			case 'SET_ZOOM_LEVEL': {
-				const derivedBlockEditingModes = new Map();
-				let sectionClientIds;
-
-				// In zoomed out mode or navigation mode, sections and the section root
-				// are set to contentOnly.
-				// Navigation mode also allows content editing. Blocks within sections
-				// that have role: content are set to contentOnly.
-				if ( isZoomedOut || isNavMode ) {
-					// When there are sections, the majority of blocks are disabled,
-					// so the default block editing mode is set to disabled.
-					const sectionRootClientId =
-						nextState.settings?.[ sectionRootClientIdKey ];
-					derivedBlockEditingModes.set(
-						sectionRootClientId,
-						'contentOnly'
-					);
-
-					if ( sectionRootClientId !== '' ) {
-						derivedBlockEditingModes.set( '', 'disabled' );
-						recurseInnerBlocks( nextState, '', ( block ) => {
-							if ( block.clientId === sectionRootClientId ) {
-								// Avoid recursion into the section root block.
-								return false;
-							}
-							derivedBlockEditingModes.set(
-								block.clientId,
-								'disabled'
-							);
-						} );
-					}
-
-					sectionClientIds =
-						nextState.blocks.order.get( sectionRootClientId );
-
-					if ( ! sectionClientIds?.length ) {
-						return {
-							...nextState,
-							derivedBlockEditingModes,
-						};
-					}
-					for ( const sectionClientId of sectionClientIds ) {
-						derivedBlockEditingModes.set(
-							sectionClientId,
-							'contentOnly'
-						);
-
-						recurseInnerBlocks(
-							nextState,
-							sectionClientId,
-							( block ) => {
-								// Content is only editable when not zoomed out.
-								if (
-									! isZoomedOut &&
-									isContentBlock( block.name )
-								) {
-									derivedBlockEditingModes.set(
-										block.clientId,
-										'contentOnly'
-									);
-								} else {
-									derivedBlockEditingModes.set(
-										block.clientId,
-										'disabled'
-									);
-								}
-							}
-						);
-					}
-				}
-
-				const syncedPatternClientIds = Object.keys(
-					state.blocks.controlledInnerBlocks
-				).filter(
-					( clientId ) =>
-						state.blocks.byClientId?.get( clientId )?.name ===
-						'core/block'
-				);
-
-				if ( ! syncedPatternClientIds?.length ) {
-					return {
-						...nextState,
-						derivedBlockEditingModes,
-					};
-				}
-
-				for ( const clientId of syncedPatternClientIds ) {
-					if (
-						hasParentWithName( nextState, clientId, 'core/block' )
-					) {
-						// This is a nested pattern block, it should be set to disabled,
-						// along with all its child blocks.
-						derivedBlockEditingModes.set( clientId, 'disabled' );
-						recurseInnerBlocks( nextState, clientId, ( block ) => {
-							derivedBlockEditingModes.set(
-								block.clientId,
-								'disabled'
-							);
-						} );
-					} else {
-						// If not in zoomed out or navigation mode, set the parent pattern
-						// block to contentOnly.
-						// If we are in zoomed out or navigation mode, the pattern block
-						// will already have been set to contentOnly when it's a section.
-						if ( ! isZoomedOut && ! isNavMode ) {
-							derivedBlockEditingModes.set(
-								clientId,
-								'contentOnly'
-							);
-						}
-						recurseInnerBlocks( nextState, clientId, ( block ) => {
-							// In zoomed out mode users can't edit content.
-							// In navigation mode users can't edit content outside sections.
-							if (
-								isZoomedOut ||
-								( isNavMode &&
-									! isInSection( nextState, block.clientId ) )
-							) {
-								// This will have already been set to disabled by the
-								// code that handles zoomed out/nav mode, so stop recursion.
-								return false;
-							}
-
-							// If the block has bindings, it should be set to contentOnly.
-							if ( hasBindings( block ) ) {
-								derivedBlockEditingModes.set(
-									block.clientId,
-									'contentOnly'
-								);
-								return;
-							}
-
-							// Set any other pattern content to disabled.
-							// Users have to specifically edit the pattern source
-							// to change this content.
-							derivedBlockEditingModes.set(
-								block.clientId,
-								'disabled'
-							);
-						} );
-					}
-				}
-
 				return {
 					...nextState,
-					derivedBlockEditingModes,
+					derivedBlockEditingModes:
+						getDerivedBlockEditingModesForTree( nextState ),
 				};
 			}
 		}
