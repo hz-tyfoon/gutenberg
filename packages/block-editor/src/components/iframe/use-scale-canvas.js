@@ -221,6 +221,9 @@ export function useScaleCanvas( {
 		transitionFrom.current = transitionTo.current;
 	}, [ iframeDocument ] );
 
+	/**
+	 * Runs when zoom out mode is toggled, and sets the startAnimation flag.
+	 */
 	useEffect( () => {
 		if ( ! iframeDocument ) {
 			return;
@@ -237,15 +240,19 @@ export function useScaleCanvas( {
 		};
 	}, [ iframeDocument, isZoomedOut ] );
 
-	// Calculate the scaling and CSS variables for the zoom out canvas
+	/**
+	 * This handles:
+	 * 1. Setting the correct scale and vars of the canvas when zoomed out
+	 * 2. The animation of zooming in/out
+	 */
 	useEffect( () => {
 		if ( ! iframeDocument ) {
 			return;
 		}
 
+		// We need to update the appropriate scale to exit from. If sidebars have been opened since setting the
+		// original scale, we will snap to a much smaller scale due to the scale container changing size when exiting.
 		if ( isAutoScaled && transitionFrom.current.scaleValue !== 1 ) {
-			// We need to update the appropriate scale to exit from. If sidebars have been opened since setting the
-			// original scale, we will snap to a much smaller scale due to the scale container changing size when exiting.
 			// We use containerWidth as the divisor, as scaleContainerWidth will always match the containerWidth when
 			// exiting.
 			transitionFrom.current.scaleValue = calculateScale( {
@@ -256,7 +263,8 @@ export function useScaleCanvas( {
 			} );
 		}
 
-		// If we are not going to animate the transition set them directly.
+		// If we are not going to animate the transition set them directly. If we are animating,
+		// these values will be set when the animation is finished.
 		// Example: Opening sidebars that reduce the scale of the canvas.
 		if ( ! startAnimationRef.current ) {
 			iframeDocument.documentElement.style.setProperty(
@@ -300,50 +308,37 @@ export function useScaleCanvas( {
 		 * - after the animation is complete, remove the fixed positioning
 		 *   and set the scroll position that keeps everything centered
 		 */
-
-		const prevScale = transitionFrom.current.scaleValue;
 		if ( startAnimationRef.current ) {
 			// Don't allow a new transition to start again unless it was started by the zoom out mode changing.
 			startAnimationRef.current = false;
 
+			/**
+			 * Handle reversing the animation. If we already have an animation running,
+			 * referse it.
+			 */
 			if ( animationRef.current ) {
-				// When reversing the animation, we'll need to know:
-				// - The scroll position we started from before the animation.
-				//   Otherwise, it will always report as 0 because of the fixed positioning.
-				//   This can be used for the `scrollTopNext` value.
-				// - The previous client height, as it's used in the finishing state of the animation.
 				animationRef.current.reverse();
-				// Swap the transition values so that we can reverse the animation.
+				// Swap the transition to/from refs so that we set the correct values when
+				// finishZoomOutAnimation runs.
 				const tempTransitionFrom = transitionFrom.current;
 				const tempTransitionTo = transitionTo.current;
 				transitionFrom.current = tempTransitionTo;
 				transitionTo.current = tempTransitionFrom;
-			}
-
-			// Only start a new animation if the scale has changed. Otherwise we're just updating the CSS variables
-			// or reversing the animation.
-			else if ( scaleValue !== prevScale ) {
-				// Unscaled size of the previous padding around the iframe content.
-				const prevFrameSize = transitionFrom.current.frameSize;
-
-				// Unscaled height of the previous iframe container.
-				const prevClientHeight =
-					transitionFrom.current.clientHeight ?? clientHeight;
+			} else {
+				/**
+				 * Start a new zoom animation.
+				 */
 
 				// We can't trust the set value from contentHeight, as it was measured
 				// before the zoom out mode was changed. After zoom out mode is changed,
 				// appenders may appear or disappear, so we need to get the height from
 				// the iframe at this point when we're about to animate the zoom out.
 				// The iframe scrollTop, scrollHeight, and clientHeight will all be
-				// accurate. The client height also does change when the zoom out mode
-				// is toggled, as the bottom bar about selecting the template is
-				// added/removed when toggling zoom out mode.
-				transitionFrom.current = {
-					scaleValue: prevScale,
-					frameSize: prevFrameSize,
-					clientHeight: prevClientHeight,
-					scrollTop: iframeDocument.documentElement.scrollTop,
-				};
+				// accurate.
+				transitionFrom.current.clientHeight =
+					transitionFrom.current.clientHeight ?? clientHeight;
+				transitionFrom.current.scrollTop =
+					iframeDocument.documentElement.scrollTop;
 
 				transitionTo.current = {
 					scaleValue,
