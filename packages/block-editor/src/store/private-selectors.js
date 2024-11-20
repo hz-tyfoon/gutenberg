@@ -112,7 +112,6 @@ function getEnabledClientIdsTreeUnmemoized( state, rootClientId ) {
 export const getEnabledClientIdsTree = createRegistrySelector( ( select ) =>
 	createSelector( getEnabledClientIdsTreeUnmemoized, ( state ) => [
 		state.blocks.order,
-		state.defaultBlockEditingMode,
 		state.derivedBlockEditingModes,
 		state.blockEditingModes,
 		state.settings.templateLock,

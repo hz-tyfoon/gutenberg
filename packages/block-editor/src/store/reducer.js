@@ -2294,6 +2294,8 @@ function getDerivedBlockEditingModeForBlock(
 		// or blocks that are inside synced patterns with bindings.
 		const block = state.blocks.tree.get( clientId );
 
+		// Handle synced pattern content so the inner blocks of a synced pattern are
+		// properly disabled.
 		if ( syncedPatternClientIds.length ) {
 			const parentPatternClientId = findParentInClientIdsList(
 				state,
@@ -2301,7 +2303,6 @@ function getDerivedBlockEditingModeForBlock(
 				syncedPatternClientIds
 			);
 
-			// There's some special handling for synced patterns, even in nav mode.
 			if ( parentPatternClientId ) {
 				// This is a pattern nested in another pattern, it should be disabled.
 				if (
@@ -2386,12 +2387,12 @@ function getDerivedBlockEditingModeForBlock(
  * This function calculates the editing modes for each block in the tree, taking into account
  * various factors such as zoom level, navigation mode, sections, and synced patterns.
  *
- * @param {Object} state            The current state object.
- * @param {string} treeRootClientId The client ID of the root block for the tree. Defaults to an empty string.
+ * @param {Object} state        The current state object.
+ * @param {string} treeClientId The client ID of the root block for the tree. Defaults to an empty string.
  *
  * @return {Map} A Map containing the derived block editing modes, keyed by block client ID.
  */
-function getDerivedBlockEditingModesForTree( state, treeRootClientId = '' ) {
+function getDerivedBlockEditingModesForTree( state, treeClientId = '' ) {
 	const isZoomedOut =
 		state?.zoomLevel < 100 || state?.zoomLevel === 'auto-scaled';
 	const isNavMode =
@@ -2410,7 +2411,7 @@ function getDerivedBlockEditingModesForTree( state, treeRootClientId = '' ) {
 			state.blocks.byClientId?.get( clientId )?.name === 'core/block'
 	);
 
-	traverseBlockTree( state, treeRootClientId, ( block ) => {
+	traverseBlockTree( state, treeClientId, ( block ) => {
 		const _blockEditingMode = getDerivedBlockEditingModeForBlock(
 			state,
 			block.clientId,
@@ -2447,7 +2448,7 @@ function getDerivedBlockEditingModesForTree( state, treeRootClientId = '' ) {
  *
  * @return {Map|undefined} The updated derived block editing modes, or undefined if no changes were made.
  */
-function updateDerivedBlockEditingModes( {
+function getDerivedBlockEditingModesUpdates( {
 	prevState,
 	nextState,
 	addedBlocks,
@@ -2530,7 +2531,7 @@ export function withDerivedBlockEditingModes( reducer ) {
 		switch ( action.type ) {
 			case 'REMOVE_BLOCKS': {
 				const nextDerivedBlockEditingModes =
-					updateDerivedBlockEditingModes( {
+					getDerivedBlockEditingModesUpdates( {
 						prevState: state,
 						nextState,
 						removedClientIds: action.clientIds,
@@ -2547,7 +2548,7 @@ export function withDerivedBlockEditingModes( reducer ) {
 			case 'RECEIVE_BLOCKS':
 			case 'INSERT_BLOCKS': {
 				const nextDerivedBlockEditingModes =
-					updateDerivedBlockEditingModes( {
+					getDerivedBlockEditingModesUpdates( {
 						prevState: state,
 						nextState,
 						addedBlocks: action.blocks,
@@ -2563,7 +2564,7 @@ export function withDerivedBlockEditingModes( reducer ) {
 			}
 			case 'REPLACE_BLOCKS': {
 				const nextDerivedBlockEditingModes =
-					updateDerivedBlockEditingModes( {
+					getDerivedBlockEditingModesUpdates( {
 						prevState: state,
 						nextState,
 						addedBlocks: action.blocks,
@@ -2580,7 +2581,7 @@ export function withDerivedBlockEditingModes( reducer ) {
 			}
 			case 'REPLACE_INNER_BLOCKS': {
 				const nextDerivedBlockEditingModes =
-					updateDerivedBlockEditingModes( {
+					getDerivedBlockEditingModesUpdates( {
 						prevState: state,
 						nextState,
 						addedBlocks: action.blocks,
@@ -2601,7 +2602,7 @@ export function withDerivedBlockEditingModes( reducer ) {
 			}
 			case 'MOVE_BLOCKS_TO_POSITION': {
 				const nextDerivedBlockEditingModes =
-					updateDerivedBlockEditingModes( {
+					getDerivedBlockEditingModesUpdates( {
 						prevState: state,
 						nextState,
 						addedBlocks: action.clientIds.map( ( clientId ) => {
