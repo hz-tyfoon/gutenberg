@@ -27,6 +27,7 @@ export const classicStylebookRoute = {
 			/>
 		),
 		preview: <StyleBookPreview />,
+		mobile: <StyleBookPreview />,
 	},
 	widths: {
 		content: 380,
