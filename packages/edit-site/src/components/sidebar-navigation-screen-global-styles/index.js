@@ -48,8 +48,7 @@ export function SidebarNavigationItemGlobalStyles( props ) {
 export default function SidebarNavigationScreenGlobalStyles() {
 	const history = useHistory();
 	const { params } = useLocation();
-	const { revisions, isLoading: isLoadingRevisions } =
-		useGlobalStylesRevisions();
+	const { isLoading: isLoadingRevisions } = useGlobalStylesRevisions();
 	const { openGeneralSidebar } = useDispatch( editSiteStore );
 	const { setEditorCanvasContainerView } = unlock(
 		useDispatch( editSiteStore )
@@ -96,9 +95,7 @@ export default function SidebarNavigationScreenGlobalStyles() {
 
 	// If there are no revisions, do not render a footer.
 	const hasRevisions = revisionsCount > 0;
-	const modifiedDateTime = revisions?.[ 0 ]?.modified;
-	const shouldShowGlobalStylesFooter =
-		hasRevisions && ! isLoadingRevisions && modifiedDateTime;
+	const shouldShowGlobalStylesFooter = hasRevisions && ! isLoadingRevisions;
 	return (
 		<>
 			<SidebarNavigationScreen
@@ -113,7 +110,7 @@ export default function SidebarNavigationScreenGlobalStyles() {
 				footer={
 					shouldShowGlobalStylesFooter && (
 						<SidebarNavigationScreenDetailsFooter
-							record={ revisions?.[ 0 ] }
+							revisionsCount={ revisionsCount }
 							onClick={ openRevisions }
 						/>
 					)
