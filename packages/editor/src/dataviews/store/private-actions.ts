@@ -88,11 +88,12 @@ export function unregisterEntityField(
 	};
 }
 
-export function setIsReady( kind: string, name: string ) {
+export function setIsReady( kind: string, name: string, part: string ) {
 	return {
 		type: 'SET_IS_READY' as const,
 		kind,
 		name,
+		part,
 	};
 }
 
@@ -101,7 +102,8 @@ export const registerPostTypeActions =
 	async ( { registry }: { registry: any } ) => {
 		const isReady = unlock( registry.select( editorStore ) ).isEntityReady(
 			'postType',
-			postType
+			postType,
+			'actions'
 		);
 		if ( isReady ) {
 			return;
@@ -109,7 +111,8 @@ export const registerPostTypeActions =
 
 		unlock( registry.dispatch( editorStore ) ).setIsReady(
 			'postType',
-			postType
+			postType,
+			'actions'
 		);
 
 		const postTypeConfig = ( await registry
@@ -178,8 +181,20 @@ export const registerPostTypeActions =
 export const registerPostTypeFields =
 	( postType: string ) =>
 	async ( { registry }: { registry: any } ) => {
-		// TODO: do not register fields if there were already registered.
-		// Consider the existing isReady state.
+		const isReady = unlock( registry.select( editorStore ) ).isEntityReady(
+			'postType',
+			postType,
+			'fields'
+		);
+		if ( isReady ) {
+			return;
+		}
+
+		unlock( registry.dispatch( editorStore ) ).setIsReady(
+			'postType',
+			postType,
+			'fields'
+		);
 
 		const fields = [
 			featuredImageField,

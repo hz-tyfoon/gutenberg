@@ -13,7 +13,10 @@ type ReduxAction =
 
 export type ActionState = Record< string, Record< string, Action< any >[] > >;
 export type FieldsState = Record< string, Record< string, Field< any >[] > >;
-export type ReadyState = Record< string, Record< string, boolean > >;
+export type ReadyState = Record<
+	string,
+	Record< string, Record< string, boolean > >
+>;
 export type State = {
 	actions: ActionState;
 	fields: FieldsState;
@@ -27,7 +30,10 @@ function isReady( state: ReadyState = {}, action: ReduxAction ) {
 				...state,
 				[ action.kind ]: {
 					...state[ action.kind ],
-					[ action.name ]: true,
+					[ action.name ]: {
+						...( state[ action.kind ]?.[ action.name ] ?? {} ),
+						[ action.part ]: true,
+					},
 				},
 			};
 	}
