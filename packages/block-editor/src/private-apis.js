@@ -18,6 +18,7 @@ import { useHasBlockToolbar } from './components/block-toolbar/use-has-block-too
 import { cleanEmptyObject } from './hooks/utils';
 import BlockQuickNavigation from './components/block-quick-navigation';
 import { LayoutStyle } from './components/block-list/layout';
+import BlockManager from './components/block-manager';
 import { BlockRemovalWarningModal } from './components/block-removal-warning-modal';
 import {
 	setBackgroundStyleDefaults,
@@ -71,6 +72,7 @@ lock( privateApis, {
 	cleanEmptyObject,
 	BlockQuickNavigation,
 	LayoutStyle,
+	BlockManager,
 	BlockRemovalWarningModal,
 	useLayoutClasses,
 	useLayoutStyles,
