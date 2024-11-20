@@ -250,7 +250,7 @@ function DensityPicker() {
 			__nextHasNoMarginBottom
 			size="__unstable-large"
 			label={ __( 'Density' ) }
-			value={ view.density || 'medium' }
+			value={ view.density || 'balanced' }
 			onChange={ ( value ) => {
 				onChangeView( {
 					...view,
@@ -268,9 +268,9 @@ function DensityPicker() {
 				) }
 			/>
 			<ToggleGroupControlOption
-				key="medium"
-				value="medium"
-				label={ _x( 'Medium', 'Density option for DataView layout' ) }
+				key="balanced"
+				value="balanced"
+				label={ _x( 'Balanced', 'Density option for DataView layout' ) }
 			/>
 			<ToggleGroupControlOption
 				key="compact"
