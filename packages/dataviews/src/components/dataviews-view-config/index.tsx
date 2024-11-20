@@ -240,8 +240,8 @@ function ItemsPerPageControl() {
 function DensityPicker() {
 	const { view, onChangeView } = useContext( DataViewsContext );
 	if (
-		! VIEW_LAYOUTS.find( ( layout ) => layout.type === view.type )
-			?.supportsDensity
+		! VIEW_LAYOUTS.find( ( layout ) => layout.type === view.type )?.supports
+			?.density
 	) {
 		return null;
 	}

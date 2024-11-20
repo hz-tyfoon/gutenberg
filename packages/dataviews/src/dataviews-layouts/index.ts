@@ -30,7 +30,7 @@ export const VIEW_LAYOUTS = [
 		label: __( 'Grid' ),
 		component: ViewGrid,
 		icon: category,
-		supportsDensity: true,
+		supports: { density: true },
 	},
 	{
 		type: LAYOUT_LIST,
