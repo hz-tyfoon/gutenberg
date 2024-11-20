@@ -2,7 +2,7 @@
  * WordPress dependencies
  */
 import { store as coreStore } from '@wordpress/core-data';
-import type { Action } from '@wordpress/dataviews';
+import type { Action, Field } from '@wordpress/dataviews';
 import { doAction } from '@wordpress/hooks';
 
 /**
@@ -24,6 +24,15 @@ import {
 	renamePost,
 	resetPost,
 	deletePost,
+	featuredImageField,
+	dateField,
+	parentField,
+	passwordField,
+	commentStatusField,
+	slugField,
+	statusField,
+	authorField,
+	titleField,
 } from '@wordpress/fields';
 import duplicateTemplatePart from '../actions/duplicate-template-part';
 
@@ -50,6 +59,32 @@ export function unregisterEntityAction(
 		kind,
 		name,
 		actionId,
+	};
+}
+
+export function registerEntityField< Item >(
+	kind: string,
+	name: string,
+	config: Field< Item >
+) {
+	return {
+		type: 'REGISTER_ENTITY_FIELD' as const,
+		kind,
+		name,
+		config,
+	};
+}
+
+export function unregisterEntityField(
+	kind: string,
+	name: string,
+	fieldId: string
+) {
+	return {
+		type: 'UNREGISTER_ENTITY_FIELD' as const,
+		kind,
+		name,
+		fieldId,
 	};
 }
 
@@ -138,4 +173,35 @@ export const registerPostTypeActions =
 		} );
 
 		doAction( 'core.registerPostTypeActions', postType );
+	};
+
+export const registerPostTypeFields =
+	( postType: string ) =>
+	async ( { registry }: { registry: any } ) => {
+		// TODO: do not register fields if there were already registered.
+		// Consider the existing isReady state.
+
+		const fields = [
+			featuredImageField,
+			titleField,
+			authorField,
+			statusField,
+			dateField,
+			slugField,
+			parentField,
+			commentStatusField,
+			passwordField,
+		];
+
+		registry.batch( () => {
+			fields.forEach( ( field ) => {
+				unlock( registry.dispatch( editorStore ) ).registerEntityField(
+					'postType',
+					postType,
+					field
+				);
+			} );
+		} );
+
+		doAction( 'core.registerPostTypeFields', postType );
 	};
