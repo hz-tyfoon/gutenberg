@@ -11,7 +11,7 @@ body.js #wpbody {
 	padding-top: 0;
 }
 body {
-	@include wp-admin-reset("#gutenberg-classic-stylebook");
+	@include wp-admin-reset("#gutenberg-stylebook");
 }
 
 .edit-site-style-book__iframe {

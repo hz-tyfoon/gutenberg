@@ -331,12 +331,19 @@ function StyleBook( {
 /**
  * Style Book Preview component renders the stylebook without the Editor dependency.
  *
- * @param {Object} props            Component props.
- * @param {string} props.path       Path to the selected block.
- * @param {Object} props.userConfig User configuration.
+ * @param {Object}   props            Component props.
+ * @param {string}   props.path       Path to the selected block.
+ * @param {Object}   props.userConfig User configuration.
+ * @param {Function} props.isSelected Function to check if a block is selected.
+ * @param {Function} props.onSelect   Function to select a block.
  * @return {Object} Style Book Preview component.
  */
-export const StyleBookPreview = ( { path = '', userConfig = {} } ) => {
+export const StyleBookPreview = ( {
+	path = '',
+	userConfig = {},
+	isSelected,
+	onSelect,
+} ) => {
 	const [ resizeObserver, sizes ] = useResizeObserver();
 	const { colors, gradients } = useMultipleOriginColorsAndGradients();
 	// Exclude the default colors and gradients.
@@ -389,6 +396,8 @@ export const StyleBookPreview = ( { path = '', userConfig = {} } ) => {
 					settings={ settings }
 					goTo={ goTo }
 					sizes={ sizes }
+					isSelected={ isSelected }
+					onSelect={ onSelect }
 				/>
 			</BlockEditorProvider>
 		</div>

@@ -14,15 +14,15 @@ function gutenberg_add_styles_link() {
             __( 'Styles', 'gutenberg' ),
             __( 'Styles', 'gutenberg' ),
             'edit_theme_options',
-            'gutenberg-classic-stylebook',
-            'gutenberg_classic_stylebook_render',
+            'gutenberg-stylebook-static',
+            'gutenberg_stylebook_render',
             3
         );
     }
 }
 add_action( 'admin_menu', 'gutenberg_add_styles_link' );
 
-if ( isset( $_GET['page'] ) && 'gutenberg-classic-stylebook' === $_GET['page'] ) {
+if ( isset( $_GET['page'] ) && 'gutenberg-stylebook' === $_GET['page'] ) {
 	// Default to is-fullscreen-mode to avoid jumps in the UI.
 	add_filter(
 		'admin_body_class',
@@ -36,7 +36,7 @@ if ( isset( $_GET['page'] ) && 'gutenberg-classic-stylebook' === $_GET['page'] )
  * Render the Styles page for Classic themes. 
  */
 
-function gutenberg_classic_stylebook_render() {
+function gutenberg_stylebook_render() {
     $block_editor_context = new WP_Block_Editor_Context( array( 'name' => 'core/edit-site' ) );
     $custom_settings      = array(
 		'siteUrl'        => site_url(),
@@ -66,16 +66,16 @@ function gutenberg_classic_stylebook_render() {
 	/** This action is documented in wp-admin/edit-form-blocks.php */
 	do_action( 'enqueue_block_editor_assets' );
 	wp_register_style(
-		'wp-gutenberg-classic-stylebook',
+		'wp-gutenberg-stylebook',
 		gutenberg_url( 'build/edit-site/classic-stylebook.css', __FILE__ ),
 		array( 'wp-components', 'wp-commands', 'wp-edit-site' )
 	);
-	wp_enqueue_style( 'wp-gutenberg-classic-stylebook' );
+	wp_enqueue_style( 'wp-gutenberg-stylebook' );
 	wp_add_inline_script(
 		'wp-edit-site',
 		sprintf(
 			'wp.domReady( function() {
-				wp.editSite.initializeClassicStylebook( "gutenberg-classic-stylebook", %s );
+				wp.editSite.initializeClassicStylebook( "gutenberg-stylebook", %s );
 			} );',
 			wp_json_encode( $editor_settings )
 		)
@@ -83,5 +83,5 @@ function gutenberg_classic_stylebook_render() {
 	wp_enqueue_script( 'wp-edit-site' );
 	wp_enqueue_media();
 
-    echo '<div id="gutenberg-classic-stylebook" class="edit-site"></div>';
+    echo '<div id="gutenberg-stylebook" class="edit-site"></div>';
 }
