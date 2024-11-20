@@ -23,6 +23,7 @@ import SidebarNavigationItem from '../sidebar-navigation-item';
 
 export default function SidebarNavigationScreenDetailsFooter( {
 	record,
+	recordCount = 0,
 	...otherProps
 } ) {
 	/*
@@ -35,9 +36,9 @@ export default function SidebarNavigationScreenDetailsFooter( {
 	const lastRevisionId =
 		record?._links?.[ 'predecessor-version' ]?.[ 0 ]?.id ?? null;
 	const revisionsCount =
-		record?._links?.[ 'version-history' ]?.[ 0 ]?.count ?? 0;
-	// Enable the revisions link if there is a last revision and there are more than one revisions.
-	if ( lastRevisionId && revisionsCount > 1 ) {
+		recordCount || record?._links?.[ 'version-history' ]?.[ 0 ]?.count;
+	// Enable the revisions link if there is a last revision and there is more than one revision.
+	if ( lastRevisionId && revisionsCount ) {
 		hrefProps.href = addQueryArgs( 'revision.php', {
 			revision: record?._links[ 'predecessor-version' ][ 0 ].id,
 		} );
