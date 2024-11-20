@@ -19,22 +19,17 @@ function calculateScale( {
 /**
  * Compute the next scrollTop position after scaling the iframe content.
  *
- * @param {number} scrollTop      Current scrollTop position of the iframe
  * @param {number} scrollHeight   Scaled height of the current iframe content.
  * @param {Object} transitionFrom The starting point of the transition
  * @param {Object} transitionTo   The ending state of the transition
  * @return {number} The next scrollTop position after scaling the iframe content.
  */
-function computeScrollTopNext(
-	scrollTop,
-	scrollHeight,
-	transitionFrom,
-	transitionTo
-) {
+function computeScrollTopNext( scrollHeight, transitionFrom, transitionTo ) {
 	const {
 		clientHeight: prevClientHeight,
 		frameSize: prevFrameSize,
 		scaleValue: prevScale,
+		scrollTop: scrollTop,
 	} = transitionFrom;
 	const { clientHeight, frameSize, scaleValue } = transitionTo;
 	// Step 0: Start with the current scrollTop.
@@ -78,9 +73,9 @@ function getAnimationKeyframes( transitionFrom, transitionTo ) {
 	const {
 		scaleValue: prevScale,
 		frameSize: prevFrameSize,
-		scrollTopNext: scrollTop,
+		scrollTop,
 	} = transitionFrom;
-	const { scaleValue, frameSize, scrollTopNext } = transitionTo;
+	const { scaleValue, frameSize, scrollTop: scrollTopNext } = transitionTo;
 
 	return [
 		{
@@ -157,17 +152,45 @@ export function useScaleCanvas( {
 		scaleValue,
 		frameSize,
 		clientHeight: 0,
-		scrollTopNext: 0,
+		scrollTop: 0,
 	} );
 
 	const transitionTo = useRef( {
 		scaleValue,
 		frameSize,
 		clientHeight: 0,
-		scrollTopNext: 0,
+		scrollTop: 0,
 	} );
 
-	const onZoomOutTransitionEnd = useCallback( () => {
+	const startZoomOutAnimation = useCallback( () => {
+		const { scrollTop } = transitionFrom.current;
+		const { scrollTop: scrollTopNext } = transitionTo.current;
+
+		iframeDocument.documentElement.style.setProperty(
+			'--wp-block-editor-iframe-zoom-out-scroll-top',
+			`${ scrollTop }px`
+		);
+
+		iframeDocument.documentElement.style.setProperty(
+			'--wp-block-editor-iframe-zoom-out-scroll-top-next',
+			`${ scrollTopNext }px`
+		);
+
+		iframeDocument.documentElement.classList.add( 'zoom-out-animation' );
+
+		return iframeDocument.documentElement.animate(
+			getAnimationKeyframes(
+				transitionFrom.current,
+				transitionTo.current
+			),
+			{
+				easing: 'cubic-bezier(0.46, 0.03, 0.52, 0.96)',
+				duration: 400,
+			}
+		);
+	}, [ iframeDocument ] );
+
+	const finishZoomOutAnimation = useCallback( () => {
 		startAnimationRef.current = false;
 		animationRef.current = null;
 
@@ -185,7 +208,7 @@ export function useScaleCanvas( {
 
 		// Set the final scroll position that was just animated to.
 		iframeDocument.documentElement.scrollTop =
-			transitionTo.current.scrollTopNext;
+			transitionTo.current.scrollTop;
 
 		iframeDocument.documentElement.style.removeProperty(
 			'--wp-block-editor-iframe-zoom-out-scroll-top'
@@ -315,13 +338,11 @@ export function useScaleCanvas( {
 				// accurate. The client height also does change when the zoom out mode
 				// is toggled, as the bottom bar about selecting the template is
 				// added/removed when toggling zoom out mode.
-				const scrollTop = iframeDocument.documentElement.scrollTop;
-
 				transitionFrom.current = {
 					scaleValue: prevScale,
 					frameSize: prevFrameSize,
 					clientHeight: prevClientHeight,
-					scrollTopNext: scrollTop,
+					scrollTop: iframeDocument.documentElement.scrollTop,
 				};
 
 				transitionTo.current = {
@@ -330,43 +351,18 @@ export function useScaleCanvas( {
 					clientHeight,
 				};
 
-				const scrollTopNext = computeScrollTopNext(
-					scrollTop,
+				transitionTo.current.scrollTop = computeScrollTopNext(
 					iframeDocument.documentElement.scrollHeight,
 					transitionFrom.current,
 					transitionTo.current
 				);
 
-				transitionTo.current.scrollTopNext = scrollTopNext;
-
-				iframeDocument.documentElement.style.setProperty(
-					'--wp-block-editor-iframe-zoom-out-scroll-top',
-					`${ scrollTop }px`
-				);
-
-				iframeDocument.documentElement.style.setProperty(
-					'--wp-block-editor-iframe-zoom-out-scroll-top-next',
-					`${ scrollTopNext }px`
-				);
-
-				iframeDocument.documentElement.classList.add(
-					'zoom-out-animation'
-				);
-				animationRef.current = iframeDocument.documentElement.animate(
-					getAnimationKeyframes(
-						transitionFrom.current,
-						transitionTo.current
-					),
-					{
-						easing: 'cubic-bezier(0.46, 0.03, 0.52, 0.96)',
-						duration: 400,
-					}
-				);
+				animationRef.current = startZoomOutAnimation();
 
 				if ( prefersReducedMotion ) {
-					onZoomOutTransitionEnd();
+					finishZoomOutAnimation();
 				} else {
-					animationRef.current.onfinish = onZoomOutTransitionEnd;
+					animationRef.current.onfinish = finishZoomOutAnimation;
 				}
 			}
 		}
@@ -392,7 +388,8 @@ export function useScaleCanvas( {
 			);
 		};
 	}, [
-		onZoomOutTransitionEnd,
+		startZoomOutAnimation,
+		finishZoomOutAnimation,
 		prefersReducedMotion,
 		isAutoScaled,
 		scaleValue,
