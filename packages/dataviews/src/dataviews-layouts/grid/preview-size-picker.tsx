@@ -4,7 +4,13 @@
 import { RangeControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useViewportMatch } from '@wordpress/compose';
-import { useEffect, useMemo } from '@wordpress/element';
+import { useEffect, useMemo, useContext } from '@wordpress/element';
+
+/**
+ * Internal dependencies
+ */
+import DataViewsContext from '../../components/dataviews-context';
+import type { ViewGrid } from '../../types';
 
 const viewportBreaks = {
 	xhuge: { min: 3, max: 6, default: 5 },
@@ -39,31 +45,41 @@ function useViewPortBreakpoint() {
 	return null;
 }
 
-export default function DensityPicker( {
-	density,
-	setDensity,
-}: {
-	density: number;
-	setDensity: React.Dispatch< React.SetStateAction< number > >;
-} ) {
+export function useChangeGridColumnsOnViewportChange() {
 	const viewport = useViewPortBreakpoint();
+	const context = useContext( DataViewsContext );
+	const view = context.view as ViewGrid;
 	useEffect( () => {
-		setDensity( ( _density ) => {
-			if ( ! viewport || ! _density ) {
-				return 0;
-			}
-			const breakValues = viewportBreaks[ viewport ];
-			if ( _density < breakValues.min ) {
-				return breakValues.min;
-			}
-			if ( _density > breakValues.max ) {
-				return breakValues.max;
-			}
-			return _density;
-		} );
-	}, [ setDensity, viewport ] );
+		const gridColumns = view.layout?.gridColumns;
+		let newGridColumns;
+		if ( ! viewport || ! gridColumns ) {
+			return;
+		}
+		const breakValues = viewportBreaks[ viewport ];
+		if ( gridColumns < breakValues.min ) {
+			newGridColumns = breakValues.min;
+		}
+		if ( gridColumns > breakValues.max ) {
+			newGridColumns = breakValues.max;
+		}
+		if ( newGridColumns ) {
+			context.onChangeView( {
+				...view,
+				layout: {
+					...view.layout,
+					gridColumns: newGridColumns,
+				},
+			} );
+		}
+	}, [ viewport, view, context ] );
+}
+
+export default function DensityPicker() {
+	const viewport = useViewPortBreakpoint();
+	const context = useContext( DataViewsContext );
+	const view = context.view as ViewGrid;
 	const breakValues = viewportBreaks[ viewport || 'mobile' ];
-	const densityToUse = density || breakValues.default;
+	const densityToUse = view.layout?.gridColumns || breakValues.default;
 
 	const marks = useMemo(
 		() =>
@@ -94,7 +110,13 @@ export default function DensityPicker( {
 			max={ breakValues.max }
 			withInputField={ false }
 			onChange={ ( value = 0 ) => {
-				setDensity( breakValues.max + breakValues.min - value );
+				context.onChangeView( {
+					...view,
+					layout: {
+						...view.layout,
+						gridColumns: breakValues.max + breakValues.min - value,
+					},
+				} );
 			} }
 			step={ 1 }
 		/>

@@ -25,6 +25,7 @@ import { useHasAPossibleBulkAction } from '../../components/dataviews-bulk-actio
 import type { Action, NormalizedField, ViewGridProps } from '../../types';
 import type { SetSelection } from '../../private-types';
 import getClickableItemProps from '../utils/get-clickable-item-props';
+import { useChangeGridColumnsOnViewportChange } from './preview-size-picker';
 
 interface GridItemProps< Item > {
 	selection: string[];
@@ -192,8 +193,8 @@ export default function ViewGrid< Item >( {
 	isItemClickable,
 	selection,
 	view,
-	density,
 }: ViewGridProps< Item > ) {
+	useChangeGridColumnsOnViewportChange();
 	const mediaField = fields.find(
 		( field ) => field.id === view.layout?.mediaField
 	);
@@ -223,8 +224,10 @@ export default function ViewGrid< Item >( {
 		{ visibleFields: [], badgeFields: [] }
 	);
 	const hasData = !! data?.length;
-	const gridStyle = density
-		? { gridTemplateColumns: `repeat(${ density }, minmax(0, 1fr))` }
+	const gridStyle = view.layout?.gridColumns
+		? {
+				gridTemplateColumns: `repeat(${ view.layout.gridColumns }, minmax(0, 1fr))`,
+		  }
 		: {};
 	return (
 		<>

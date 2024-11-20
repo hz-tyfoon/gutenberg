@@ -169,6 +169,21 @@
 			opacity: 1;
 		}
 	}
+
+	// Density style overrides.
+	&.has-compact-density {
+		td,
+		th {
+			padding: $grid-unit-05;
+		}
+	}
+
+	&.has-comfortable-density {
+		td,
+		th {
+			padding: $grid-unit-20;
+		}
+	}
 }
 
 /* stylelint-disable-next-line scss/at-rule-no-unknown -- '@container' not globally permitted */
