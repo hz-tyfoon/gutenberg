@@ -101,6 +101,13 @@ function gutenberg_stabilize_experimental_block_supports( $args ) {
 		 * are defined in to determine the final value.
 		 *    - If config is an array, merge the arrays in their order of definition.
 		 *    - If config is not an array, use the value defined last.
+		 *
+		 * The reason for preferring the last defined key is that after filters
+		 * are applied, the last inserted key is likely the most up-to-date value.
+		 * We cannot determine with certainty which value was "last modified" so
+		 * the insertion order is the best guess. The extreme edge case of multiple
+		 * filters tweaking the same support property will become less over time as
+		 * extenders migrate existing blocks and plugins to stable keys.
 		 */
 		if ( $support !== $stable_support_key && isset( $args['supports'][ $stable_support_key ] ) ) {
 			$key_positions      = array_flip( array_keys( $args['supports'] ) );
