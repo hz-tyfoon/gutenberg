@@ -10,7 +10,7 @@ import {
 	store as blockEditorStore,
 	useInnerBlocksProps,
 } from '@wordpress/block-editor';
-import { SelectControl } from '@wordpress/components';
+import { SelectControl, PanelBody } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { store as coreStore } from '@wordpress/core-data';
 
@@ -21,6 +21,8 @@ import EnhancedPaginationControl from './inspector-controls/enhanced-pagination-
 import QueryInspectorControls from './inspector-controls';
 import EnhancedPaginationModal from './enhanced-pagination-modal';
 import { getQueryContextFromTemplate } from '../utils';
+import PatternSelection, { useBlockPatterns } from './pattern-selection';
+import { unlock } from '../../lock-unlock';
 
 const DEFAULTS_POSTS_PER_PAGE = 3;
 
@@ -49,8 +51,10 @@ export default function QueryContent( {
 	const innerBlocksProps = useInnerBlocksProps( blockProps, {
 		template: TEMPLATE,
 	} );
-	const { postsPerPage } = useSelect( ( select ) => {
-		const { getSettings } = select( blockEditorStore );
+	const { postsPerPage, isNavigationMode } = useSelect( ( select ) => {
+		const { getSettings, isNavigationMode: _isNavigationMode } = unlock(
+			select( blockEditorStore )
+		);
 		const { getEntityRecord, getEntityRecordEdits, canUser } =
 			select( coreStore );
 		const settingPerPage = canUser( 'read', {
@@ -67,6 +71,7 @@ export default function QueryContent( {
 			?.posts_per_page;
 
 		return {
+			isNavigationMode: _isNavigationMode(),
 			postsPerPage:
 				editedSettingPerPage ||
 				settingPerPage ||
@@ -126,6 +131,7 @@ export default function QueryContent( {
 		__unstableMarkNextChangeAsNotPersistent,
 		setAttributes,
 	] );
+	const hasPatterns = !! useBlockPatterns( clientId, attributes ).length;
 	const updateDisplayLayout = ( newDisplayLayout ) =>
 		setAttributes( {
 			displayLayout: { ...displayLayout, ...newDisplayLayout },
@@ -149,6 +155,24 @@ export default function QueryContent( {
 				setAttributes={ setAttributes }
 				clientId={ clientId }
 			/>
+			{ hasPatterns && (
+				<InspectorControls
+					group={ isNavigationMode ? 'navigationMode' : 'default' }
+				>
+					<PanelBody
+						initialOpen={ isNavigationMode }
+						title={ __( 'Design' ) }
+						className="block-library-query-toolspanel__design"
+					>
+						<PatternSelection
+							attributes={ attributes }
+							clientId={ clientId }
+							showTitlesAsTooltip
+							showSearch={ false }
+						/>
+					</PanelBody>
+				</InspectorControls>
+			) }
 			<InspectorControls>
 				<QueryInspectorControls
 					name={ name }

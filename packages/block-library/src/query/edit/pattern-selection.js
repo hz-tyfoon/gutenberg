@@ -50,6 +50,7 @@ export default function PatternSelection( {
 	clientId,
 	attributes,
 	showTitlesAsTooltip = false,
+	showSearch = true,
 } ) {
 	const [ searchValue, setSearchValue ] = useState( '' );
 	const { replaceBlock, selectBlock } = useDispatch( blockEditorStore );
@@ -80,15 +81,17 @@ export default function PatternSelection( {
 	};
 	return (
 		<div className="block-library-query-pattern__selection-content">
-			<div className="block-library-query-pattern__selection-search">
-				<SearchControl
-					__nextHasNoMarginBottom
-					onChange={ setSearchValue }
-					value={ searchValue }
-					label={ __( 'Search' ) }
-					placeholder={ __( 'Search' ) }
-				/>
-			</div>
+			{ showSearch && (
+				<div className="block-library-query-pattern__selection-search">
+					<SearchControl
+						__nextHasNoMarginBottom
+						onChange={ setSearchValue }
+						value={ searchValue }
+						label={ __( 'Search' ) }
+						placeholder={ __( 'Search' ) }
+					/>
+				</div>
+			) }
 			<BlockContextProvider value={ blockPreviewContext }>
 				<BlockPatternsList
 					blockPatterns={ filteredBlockPatterns }
